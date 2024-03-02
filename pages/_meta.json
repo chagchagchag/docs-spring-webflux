@@ -1,5 +1,8 @@
 {
   "index": "Introduction",
+  "server-sent-event": "Server Sent Event (SSE)",
+  "webflux-websocket": "Webflux Websocket",
+  "r2dbc-mysql": "Spring Data R2dbc",
   "contact": {
     "title": "Contact ↗",
     "type": "page",
