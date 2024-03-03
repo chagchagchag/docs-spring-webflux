@@ -48,6 +48,7 @@ public class SimpleSyncExample {
 ```
 <br/>
 
+![](./img/synchronization/1.png)
 caller 인 main() 함수는 callee 인 `getLongDelayJob()` 함수가 1초가 넘게 실행이 끝날 때 까지 기다리고 있습니다.<br/>
 
 이렇게 caller 가 callee 의 결과를 알아야 다음 수행이 가능할 때 Synchronized 연산이라고 부르고, 1초가 넘도록 대기하게 되는 현상은 Blocking 이라고 부릅니다.<br/>
@@ -108,3 +109,7 @@ public class SimpleAsyncExample {
 ```
 <br/>
 
+![](./img/asynchronization/1.png)
+
+caller 인 main 스레드는 여전히 callee 인 `execLongDelayJob(Consumer)` 의 작업이 끝나고 있기를 기다리고 있는 현상은 `Blocking` 입니다. 하지만, callee 인 `execLongDelayJob(Consumer)` 의 결과값을 알 필요는 없습니다. 이렇게 caller 가 callee 의 연산 결과를 알 필요가 없는 경우의 연산을 `비동기` 라고 부릅니다.<br/>
+<br/>
