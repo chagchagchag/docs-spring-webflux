@@ -1,0 +1,38 @@
+## Java IO vs Java NIO vs Java AIO
+
+## 함수 호출 관점
+
+|              |                    동기                     |  비동기  |
+| ------------ | :-----------------------------------------: | :------: |
+| Blocking     |                   Java IO                   |    X     |
+| Non-Blocking | Java NIO<br/>(File IO 는 Non Blocking 불가) | Java AIO |
+
+함수의 호출로만 봤을 때 Java IO, Java NIO, Java AIO 는 각각 아래와 같습니다.
+
+- Java IO : 블로킹 방식의 동기 연산입니다.
+- Java NIO : 논블로킹 방식의 동기 연산입니다. 다만, File IO 는 Java NIO 에서도 Non Blocking 이 불가능합니다.
+- Java AIO : 논블로킹 방식의 비동기 연산이 가능합니다.
+
+<br/>
+
+
+
+## IO 모델 관점
+
+|              |        동기        | 비동기 |
+| ------------ | :----------------: | :----: |
+| Blocking     |      Java IO       |   X    |
+| Non-Blocking | Java NIO, Java AIO |   X    |
+
+IO 모델 방식으로 따져봤을 때 Java IO, Java NIO, Java AIO 는 각각 아래와 같습니다.
+
+- Java IO : 블로킹 기반의 동기 연산입니다.
+- Java NIO : 논블로킹 방식의 동기 연산입니다.
+- JAVA AIO : Java AIO 역시 IO 연산작업에 있어서는 블로킹 방식의 동기연산이 됩니다.
+
+
+
+
+
+
+
