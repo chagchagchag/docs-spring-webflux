@@ -7,6 +7,7 @@
 
 ## 동기 (Synchronization)
 동기 라는 개념은 컴퓨터공학, 전자공학을 배우신 분들은 익숙하실 듯 합니다. 흔히 트랜지스터 별로 클록이 다르기에 서로 클록이 1이 되는 시점을 맞춰서 동기화 하는 그런 글들이 보신적이 있을 겁니다.<br/>
+
 컴퓨터공학, 전자공학이 아니더라도 일반인 분들 역시 드롭박스나 구글 드라이브에서 한동안 유행했던 동기화 버튼을 본적이 있을 것입니다.<br/>
 
 동기화라는 개념을 쉽게 설명하면 이렇습니다. 동기화는 이쪽에서 바라보는 값과 반대편의 값을 보고 그 값을 맞추거나 반대편의 값이 나타날 때까지 기다려서 그 값을 기준으로 어떤 작업을 하기 위해 기다리는 것을 의미합니다.<br/>
@@ -25,7 +26,7 @@ public class SimpleSyncExample {
     var result = getLongDelayJob();
     var increased = result + 1;
     assert increased == 501;
-    log.info("(end) main function" + LocalTime.now());
+    log.info("(end) main function " + LocalTime.now());
   }
 
   public static int getLongDelayJob(){
@@ -40,11 +41,18 @@ public class SimpleSyncExample {
 ```
 <br/>
 
+출력결과
+```plain
+15:20:13.250 [main] INFO ...sync_async.simple.SimpleAsyncExample -- (start) main function 15:20:13.248764
+15:20:14.253 [main] INFO ...sync_async.simple.SimpleAsyncExample -- (end) main function 15:20:14.253948300
+```
+<br/>
+
 caller 인 main() 함수는 callee 인 `getLongDelayJob()` 함수가 1초가 넘게 실행이 끝날 때 까지 기다리고 있습니다.<br/>
 
 이렇게 caller 가 callee 의 결과를 알아야 다음 수행이 가능할 때 Synchronized 연산이라고 부르고, 1초가 넘도록 대기하게 되는 현상은 Blocking 이라고 부릅니다.<br/>
 
-요약해보겠습니다. 동기화는 caller 가 callee 의 결과값을 알기 위해 리턴값을 받는 동작을 의미합니다. 이때 callee 의 작업이 오래 걸리게 되어 기다리게 된다면 이렇게 기다리는 작업은 `Blocking` 이라고 부릅니다.<br/>
+요약해보겠습니다. 동기화는 caller 가 callee 의 결과값을 알기 위해 리턴값을 받는 동작을 의미합니다. 이때 callee 의 작업이 오래 걸리게 되어 기다리게 된다면 이렇게 기다리는 작업은 `Blocking` 이라고 부릅니다. 따라서 위의 예제는 블로킹 방식의 동기연산입니다.<br/>
 
 ## 흔한 단어의 오용 : 동기화 vs 블로킹
 많은 사람들이 오해를 하는 내용이고 저 역시도 오해를 한적이 있습니다.<br/>
@@ -53,6 +61,46 @@ caller 인 main() 함수는 callee 인 `getLongDelayJob()` 함수가 1초가 넘
 
 반면 동기화는 한쪽에서 다른 한쪽의 값이 필요할 때 그 값을 가져와서 그 값을 기반으로 다른 작업을 수행하는 것을 의미합니다.<br/>
 
-동기화 예제를 설명하다보면 오래 걸리는 작업을 멀티 스레드 기반으로 돌릴때 조건변수의 동기화에 대한 예제가 많다보니 동기화는 블로킹이 일어난다는 착각이 들기 쉬운데요. 동기화와 블로킹은 개념이 가리키는 포인트가 조금 다릅니다. 동기화는 값을 맞추는 것을 의미하고, 블로킹은 어떤 작업이 오래 걸리는 것으로 인해 기다리고 있는 현상을 의미합니다.<br/>
+교과서에 자주 나오는 동기화 예제를 보면 오래 걸리는 작업을 멀티 스레드 기반으로 돌릴때 조건변수의 동기화에 대한 예제가 많다보니 동기화는 블로킹이 일어난다는 착각이 들기 쉬운데요. 동기화와 블로킹은 개념이 가리키는 포인트가 조금 다릅니다. 동기화는 값을 맞추는 것을 의미하고, 블로킹은 어떤 작업이 오래 걸리는 것으로 인해 기다리고 있는 현상을 의미합니다. 동기화가 시간이 오래 걸리는 작업을 의미하지는 않습니다. 어떤 값을 리턴받은 것을 맞추는(싱크)하는 작업이라고 생각하면 쉽습니다.<br/>
+<br/>
 
-## 비동기
+## 비동기 (Asynchronization)
+비동기는 caller 가 callee 를 호출했을 때 callee 가 반환하는 값을 기반으로 caller 가 이 값으로 다른 작업을 수행할 필요가 없을때 주로 비동기라고 합니다. 쉽게 이야기하면 caller 가 callee 의 값을 받아서 맞출 필요가 없는 경우를 의미합니다.<br/>
+
+아래는 비동기 예제입니다. 위에서 살펴봤던 동기 방식의 예제를 비동기 버전으로 바꿨습니다. 그리고 비동기방식이지만 여전히 블로킹이 되고 있습니다.<br/>
+```java filename="SimpleSyncExample.java" {0} copy
+package io.chagchagchag.example.foobar.concurrent.sync_async.simple;
+
+import java.time.LocalTime;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class SimpleSyncExample {
+  public static void main(String [] args){
+    log.info("(start) main function " + LocalTime.now());
+    var result = getLongDelayJob();
+    var increased = result + 1;
+    assert increased == 501;
+    log.info("(end) main function " + LocalTime.now());
+  }
+
+  public static int getLongDelayJob(){
+    long current = System.currentTimeMillis();
+    while(true){
+      long timeSpent = System.currentTimeMillis() - current;
+      if(timeSpent > 1000) break;
+    }
+    return 500;
+  }
+}
+```
+<br/>
+
+출력결과
+```plain
+16:38:48.054 [main] INFO ...sync_async.simple.SimpleAsyncExample -- (start) main function 16:38:48.050013500
+16:38:49.062 [main] INFO ...sync_async.simple.SimpleAsyncExample -- result == 1000
+16:38:49.064 [main] INFO ...sync_async.simple.SimpleAsyncExample -- (end) main function 16:38:49.063973
+```
+<br/>
+
