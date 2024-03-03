@@ -1,5 +1,6 @@
 {
     "java-io-java-nio-java-aio": "Java IO,NIO,AIO",
+    "java-socket-communication": "Java 의 소켓 통신방식",
     "what-is-nio": "NIO 의 개념, 장점",
     "tomcat-vs-netty": "Tomcat vs Netty"
 }
