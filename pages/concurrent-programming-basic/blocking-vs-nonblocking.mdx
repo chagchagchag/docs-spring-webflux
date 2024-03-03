@@ -1,0 +1,50 @@
+## 블로킹 vs 논블로킹
+
+## 블로킹 
+블로킹 연산은 이전 문서에서 살펴봤던 동기화 예제에서 모두 살펴봤었습니다. 동기화를 논블로킹 방식으로도 수행할 수 있는데 논블로킹 방식으로 동기화를 수행하는 것은 아래에 별도의 섹션에서 정리하도록 하겠습니다.<br/>
+
+블로킹이라는 것은 어떤 작업이 끝날 때까지 이 작업을 호출한 곳에서 기다리는 것을 의미합니다. 쉽게 이야기해서 caller 가 callee 의 작업이 끝날 때 까지 기다리는 것을 의미합니다.<br/>
+
+블로킹 기반으로 동기(Synchronization) 연산을 수행하는 예제는 아래와 같습니다.
+### 블로킹 기반의 동기(Synchronization) 예제
+```java filename="SimpleSyncExample.java" {0} copy
+package io.chagchagchag.example.foobar.concurrent.sync_async.simple;
+
+import java.time.LocalTime;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class SimpleSyncExample {
+  public static void main(String [] args){
+    log.info("(start) main function " + LocalTime.now());
+    var result = getLongDelayJob();
+    var increased = result + 1;
+    assert increased == 501;
+    log.info("(end) main function " + LocalTime.now());
+  }
+
+  public static int getLongDelayJob(){
+    long current = System.currentTimeMillis();
+    while(true){
+      long timeSpent = System.currentTimeMillis() - current;
+      if(timeSpent > 1000) break;
+    }
+    return 500;
+  }
+}
+```
+<br/>
+
+출력결과
+```plain
+15:20:13.250 [main] INFO ...sync_async.simple.SimpleAsyncExample -- (start) main function 15:20:13.248764
+15:20:14.253 [main] INFO ...sync_async.simple.SimpleAsyncExample -- (end) main function 15:20:14.253948300
+```
+<br/>
+
+![](./img/synchronization/1.png)
+<br/>
+
+### 블로킹 방식의 비동기(Asynchronization) 예제
+
+
