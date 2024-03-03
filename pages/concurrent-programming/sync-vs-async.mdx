@@ -68,31 +68,35 @@ caller 인 main() 함수는 callee 인 `getLongDelayJob()` 함수가 1초가 넘
 비동기는 caller 가 callee 를 호출했을 때 callee 가 반환하는 값을 기반으로 caller 가 이 값으로 다른 작업을 수행할 필요가 없을때 주로 비동기라고 합니다. 쉽게 이야기하면 caller 가 callee 의 값을 받아서 맞출 필요가 없는 경우를 의미합니다.<br/>
 
 아래는 비동기 예제입니다. 위에서 살펴봤던 동기 방식의 예제를 비동기 버전으로 바꿨습니다. 그리고 비동기방식이지만 여전히 블로킹이 되고 있습니다.<br/>
-```java filename="SimpleSyncExample.java" {0} copy
+```java filename="SimpleAsyncExample.java" {0} copy
 package io.chagchagchag.example.foobar.concurrent.sync_async.simple;
 
 import java.time.LocalTime;
+import java.util.function.Consumer;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
-public class SimpleSyncExample {
+public class SimpleAsyncExample {
   public static void main(String [] args){
     log.info("(start) main function " + LocalTime.now());
-    var result = getLongDelayJob();
-    var increased = result + 1;
-    assert increased == 501;
+    execLongDelayJob(i -> {
+      var result = i + i;
+      log.info("result == {}", result);
+    });
     log.info("(end) main function " + LocalTime.now());
   }
 
-  public static int getLongDelayJob(){
-    long current = System.currentTimeMillis();
+  public static void execLongDelayJob(Consumer<Integer> consumer){
+    final long current = System.currentTimeMillis();
     while(true){
-      long timeSpent = System.currentTimeMillis() - current;
-      if(timeSpent > 1000) break;
+      final long spent = System.currentTimeMillis() - current;
+      if(spent > 1000) break;
     }
-    return 500;
+
+    consumer.accept(500);
   }
 }
+
 ```
 <br/>
 
