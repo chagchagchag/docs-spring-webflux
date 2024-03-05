@@ -16,7 +16,7 @@ JAVA IO 는 byte 또는 character 기반의 데이터 단위로 데이터를 처
 | 데이터 처리 방식 |                           Channel                            |                InputStream, OutputStream                |
 | 데이터 단위      |                            buffer                            |                     byte, character                     |
 | nonblocking?     | File IO를 제외한 모든 IO에 대해 논블로킹방식의 동기연산을 지원 | 모든 IO 연산을 Blocking 방식의 동기연산으로만 수행 가능 |
-| etc              |                         Selector 지                          |                                                         |
+| etc              |                        Selector 지원                         |                                                         |
 
 <br/>
 
@@ -24,17 +24,25 @@ JAVA IO 는 byte 또는 character 기반의 데이터 단위로 데이터를 처
 
 ## Channel, Buffer 의 개념
 
+위에서 살펴봤던 표에서는 `Channel`, `Buffer` 의 개념을 설명해보겠습니다. `Buffer` 는 데이터를 읽거나 쓰기 위해 데이터를 저장하는 용도로 사용합니다. 그리고 이 `Buffer` 에 접근하기 위해서는 `Channel` 의 read(), write() 함수를 사용해서 읽거나 쓰는 행동을 수행합니다.
+
+![](./img/what-is-nio/CHANNEL-BUFFER.png)
+
+- read() 함수를 수행할 때에는 사이즈에 맞는 Buffer 를 생성하고 Channel 으l read()  를 사용해서 File 의 내용들을 Buffer 에 기록합니다.
+- write() 함수를 수행할 때에는 사이즈에 맞는 Buffer 를 생성하고 Channel 의 write() 를 사용해서 File 에 Buffer 에 있는 내용들을 기록합니다.
+
 <br/>
 
 
 
 ## Buffer 클래스의 종류
 
-<br/>
+![](./img/what-is-nio/KIND-OF-BUFFER-TYPES.png)
 
-
-
-## Buffer 의 주요 필드
+- ByteBuffer : byte 단위로 데이터를 읽고 씁니다. 하위자료형으로는 HeapByteBuffer, MappedByteBuffer, DirectByteBuffer 가 있습니다. 이 Buffer 들에 대해서는 이 문서 내의 `Java NIO의 주요 Buffer들 (커널 접근 가능 여부 등)` 에 정리해두었습니다.
+- CharBuffer, ShortBuffer, IntBuffer, LongBuffer
+  - 각각 char 단위, short 단위, int 단위, long 단위를 읽을 수 있는 버퍼입니다.
+- FloatBuffer, DoubleBuffer : 실수자료형을 취급하는 Buffer 입니다.
 
 <br/>
 
@@ -72,6 +80,66 @@ assert !heapByteBuffer.isDirect();
 var byteBufferByWrap = ByteBuffer.wrap("hello".getBytes()); 
 assert !byteBufferByWrap.isDirect();
 ```
+
+<br/>
+
+
+
+## Buffer 의 위치 관련 주요 필드
+
+Buffer 에는 위치를 가리키는 주요 속성들이 있는데 이 속성들을 가리키는 메서드를 적절히 사용해야 NIO 소켓 프로그래밍 시에 유용하게 사용이 가능합니다.
+
+- capacity
+  - Buffer 가 저장할 수 있는 데이터의 최대 크기를 의미합니다. Buffer 생성시 지정해서 Buffer를 지정된 사이즈로 생성합니다. 한번 생성된 Buffer 사이즈는 변경이 불가합니다.
+- position
+  - Buffer 에서의 현재 위치를 가리키는 역할을 합니다. 버퍼에서 데이터를 읽거나 쓸때 현재 위치에서부터 시작하게 되고 Buffer 에 1Byte 가 추가될 때마다 1씩 위치 값이 증가합니다.
+- limit
+  - Buffer 에서 데이터를 읽거나 쓸 수 있는 마지막 위치를 의미합니다. capacity 와 같은 값입니다.
+- mark
+  - 현재 position 위치를 mark() 로 지정하는 것이 가능합니다. reset()을 호출할 경우에는 position 을 mark 로이동시킵니다.
+
+<br/>
+
+
+
+각 위치(오프셋) 또는 사이즈의 범위의 위치 등을 표현해보면 아래와 같습니다.
+
+- `0 <= mark <= position <= limit <= capacity`
+
+<br/>
+
+
+
+![](./img/what-is-nio/BUFFER-POSITION-CURSORS-1.png)
+
+Buffer 는 생성시에 capacity 를 기준으로 크기가 설정되는데 따라서 capacity 는 초기에 지정한 size 이기에 가장 맨 뒤의 위치를 가리키게 됩니다. limit 은 Buffer 생성 초기에는 capacity 가 가리키는 위치를 함께 가리킵니다. 그리고 데이터를 읽을 때는 처음부터 읽어야 하기 때문에 position 은 0 으로 초기에 세팅됩니다.<br/>
+
+<br/>
+
+
+
+## Buffer 의 주요 메서드
+
+### flip()
+
+![](./img/what-is-nio/FLIP.png)
+
+- flip() 메서드 
+  - buffer 의 limit 위치를 현재 position 으로 위치시킵니다. 
+  - limit의 위치 변경이 완료되면 position 의 위치를 0으로 변경합니다.
+  - buffer 를 쓰기 모드에서 읽기 모드로 전환할 때 사용합니다. 
+  - 현재까지 읽던 위치로 limit 의 위치를 변경해서 position 을 0으로 해서 처음부터 limit 까지 읽는 동작을 의미합니다.
+
+
+
+
+
+
+
+
+
+- rewind
+- clear
 
 <br/>
 
@@ -122,3 +190,10 @@ try (var socketChannel = SocketChannel.open()){
 ```
 
 <br/>
+
+
+
+
+
+## NIO 기반 간단한 소켓 프로그래밍 예제
+
