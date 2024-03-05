@@ -42,5 +42,83 @@ JAVA IO 는 byte 또는 character 기반의 데이터 단위로 데이터를 처
 
 ## Java NIO 의 주요 Buffer들 (커널 접근 가능 여부 등)
 
+### DirectByteBuffer
+
+DirectByteBuffer 는 `off-heap` 메모리에 데이터를 저장합니다. 커널 메모리에서 복사ㅡㄹ 하지 않기에 데이터를 읽고 쓰는 속도가 빠릅니다. 다만 비용이 많이 드는 System Call 을 사용하기에 allocate, deallocate가 느리다는 단점이 있습니다.<br/>
+
+allocateDirect() 함수로 생성가능합니다. 아래는 `DirectByteBuffer` 를 생성하는 예제 코드입니다.
+
+```java
+var directByteBuffer = ByteBuffer.allocateDirect(1024);
+assert directByteBuffer.isDirect(); 
+```
+
 <br/>
 
+
+
+### HeapByteBuffer
+
+`HeapByteBuffer` 는 데이터를 JVM Heap 메모리에 저장합니다. byte array 를 래핑하는 Buffer 인데, 커널 메모리에서 복사해서 저장하는 버퍼이기에 복사에 대한 연산으로 인해 커널을 한번 더 IO 가 일어난다는 점에서 읽기 속도가 느리다는 단점이 있습니다. (내부적으로는 임시로 Direct Buffer 를 만드는 연산을 수행하기에 성능이 저하됩니다.)<br/>
+
+GC에 의해 관리되기에 allocate, deallocate 가 빠릅니다.<br/>
+
+allocate() 함수 또는 wrap() 함수로 생성 가능합니다. 아래는 `HeapByteBuffer` 를 생성하는 예제 코드 입니다.
+
+```java
+var heapByteBuffer = ByteBuffer.allocate(1024);
+assert !heapByteBuffer.isDirect(); 
+
+var byteBufferByWrap = ByteBuffer.wrap("hello".getBytes()); 
+assert !byteBufferByWrap.isDirect();
+```
+
+<br/>
+
+
+
+## Java NIO 사용시 Non Blocking 방식으로 사용하는 방법
+
+SocketChannel, ServerSeocketChannel 이 extends 하고 있는 AbstractSelectableChannel 은 `SelectableChannel` 을 extends 하고 있습니다.<br/>
+
+![](./img/what-is-nio/SELECTABLE-CHANNEL.png)
+
+<br/>
+
+
+
+그리고 `SelectableChannel` 은 `configureBlocking(boolean)`, `register()` 함수를 제공하는데 그 중 `configureBlocking(boolean)` 메서드를 이용해 논블로킹을 지정가능합니다.
+
+serverSocketChannel 의 accept(), socketChannel 의 connect() 사용시 위의 configureBlocking(boolean) 을 사용하면 논블로킹으로 네트워크 IO를 할지여부를 지정가능합니다.<br/>
+
+
+
+e.g. ServerSocketChannel 의 accept() 메서드를 nonblocking 하게 실행
+
+```java
+try (var serverChannel = ServerSocketChannel.open()){
+    var address = new InetSocketAddress("localhost", 8080);
+    serverChannel.bind(address);
+    serverChannel.configureBlocking(false); /// nonblocking 설정 
+    
+    var clientSocket = serverChannel.accept(); 
+    assert clientSocket !== null;
+}
+```
+
+ <br/>
+
+
+
+e.g. SocketChannel 의 connect() 메서드를 nonblocking 하게 실행
+
+```java
+try (var socketChannel = SocketChannel.open()){
+    var address = new InetSocketAddress("localhost", 8080);
+    socketChannel.configureBlocking(false);
+    var connected = socketChannel.connect(address);
+    assert !connected;
+}
+```
+
+<br/>
