@@ -30,6 +30,10 @@ Hibernate Reactive 에서 비동기 라이브러리로 제공하는 라이브러
 
 ## Project Reactor
 
+Project Reactor 의 Official Website 는 [projectreactor.io](https://projectreactor.io/)이고
+
+Reference Guide 는 [projectreactor.io - reference](https://projectreactor.io/docs/core/release/reference/) 입니다.
+
 ![](./img/project-reactor/publishers.png)
 
 <br/>
@@ -52,6 +56,10 @@ Flux 는 List\<T\> 를 상속받은(extends) 자료형입니다. (Flux\<T\>: Lis
 
 ### Flux
 
+참고 : [prjectreactor.io - reference#flux](https://projectreactor.io/docs/core/release/reference/#flux)
+
+![](./img/project-reactor/flux.svg)
+
 Flux 는 0 \~ n 개의 요소들을 전달합니다. 에러가 발생할경우에는 Error 시그널을 전달한 후에 종료를 합니다. 만약 모든 요소를 전달했을 경우에는 Complete 시그널이 전달되면서 종료됩니다. Flux 는 Backpressure 를 지원합니다.<br/>
 
 Flux 를 Mono 로 바꿔야할 때가 있습니다. 아래의 두가지 방식으로 변환이 가능합니다.<br/>
@@ -68,11 +76,231 @@ Flux.collectList() 를 사용
 
 
 
-#### 예제
+#### 예제 1) request size 가 큰 Subscriber
+
+한번 subscribe 요청 시에 한번에 request(Integer.MAX\_VALUE) 를 하는 커스텀 Subscriber 를 만들고<br/>
+
+{100, 200, 300, 400, 500} 이라는 숫자열을 담고 있는 Flux 가 <br/>
+
+이 Subscriber 를 subscribe 하는 예제를 만들어봅니다.<br/>
+
+이 예제는 결국 적은 사이즈의 Flux 에 대해 subscribe 할 때 한번에 Integer.MAX_VALUE 만큼을request() 해서 onComlete() 가 발생하게끔 하는 결과를 만들어냅니다.
+
+<br/>
+
+
+
+BigRequestSizeSubscriber<br/>
+
+간단한 Subscriber 입니다. 1초에 한개의 요소를 구독(request()) 합니다.
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.bigsize_request;
+
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
+@Slf4j
+@RequiredArgsConstructor
+public class BigRequestSizeSubscriber<T> implements Subscriber<T> {
+  private final Integer requestSize;
+
+  @Override
+  public void onSubscribe(Subscription s) {
+    log.info("(subscribe) --- ");
+    s.request(requestSize);
+    log.info(" >>> subscriber.request({})", requestSize);
+  }
+
+  @SneakyThrows
+  @Override
+  public void onNext(T t) {
+    log.info("(next) item : {}", t);
+    Thread.sleep(1000);
+  }
+
+  @Override
+  public void onError(Throwable t) {
+    log.error("error : {}", t.getMessage());
+  }
+
+  @Override
+  public void onComplete() {
+    log.info("=== (complete) ===");
+  }
+}
+```
+
+<br/>
+
+
+
+FiniteFluxClient<br/>
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.bigsize_request;
+
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class BigRequestSizeSubscribing_FluxClient {
+  public static void main(String[] args) {
+    log.info("main function started --- ");
+    getItems().subscribe(new BigRequestSizeSubscriber<>(Integer.MAX_VALUE));
+    log.info("main function end --- ");
+  }
+
+  private static Flux<Integer> getItems(){
+    return Flux.fromIterable(List.of(100,200,300,400,500));
+  }
+}
+
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+08:24:50.463 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.bigsize_request.BigRequestSizeSubscribing_FluxClient -- main function started --- 
+08:24:50.749 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.bigsize_request.BigRequestSizeSubscriber -- (subscribe) --- 
+08:24:50.749 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.bigsize_request.BigRequestSizeSubscriber --  >>> subscriber.request(2147483647)
+08:24:50.754 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.bigsize_request.BigRequestSizeSubscriber -- (next) item : 100
+08:24:51.762 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.bigsize_request.BigRequestSizeSubscriber -- (next) item : 200
+08:24:52.774 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.bigsize_request.BigRequestSizeSubscriber -- (next) item : 300
+08:24:53.783 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.bigsize_request.BigRequestSizeSubscriber -- (next) item : 400
+08:24:54.793 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.bigsize_request.BigRequestSizeSubscriber -- (next) item : 500
+08:24:55.808 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.bigsize_request.BigRequestSizeSubscriber -- === (complete) ===
+08:24:55.808 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.bigsize_request.BigRequestSizeSubscribing_FluxClient -- main function end --- 
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+#### 예제 2) request size 를 적절하게 지정한 Backpressure  Subscriber 예제 
+
+한번 subscribe 시에 처음에는 request(1) 을 하고 그 다음부터는 onNext() 에서 1초에 1개씩 request(1) 하는 커스텀 Subscriber 를 만들고<br/>
+
+{100, 200, 300, 400, 500} 이라는 숫자열을 담고 있는 Flux 가 <br/>
+
+이 Subscriber 를 subscribe 하는 예제를 만들어봅니다.<br/>
+
+이 예제는 결국 처음 subscribe 시에는 request(1) 을 해서 그 이후부터는 onNext 에서 200,300,400,500 를 차례로 request 하면서 마지막에 도달 시 onComlete() 가 발생하게끔 하는 결과를 만들어냅니다.<br/>
+
+<br/>
+
+
+
+SmallSizeBackpressureSubscriber.java
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure;
+
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
+@Slf4j
+public class SmallSizeBackpressureSubscriber<T> implements Subscriber<T> {
+  private final Integer requestSize = 1;
+  private Subscription subscription;
+
+  @Override
+  public void onSubscribe(Subscription s) {
+    this.subscription = s;
+    log.info("(subscribe) --- ");
+    s.request(requestSize);
+    log.info(" >>> subscriber.request({})", requestSize);
+  }
+
+  @SneakyThrows
+  @Override
+  public void onNext(T t) {
+    log.info("(next) item : {}", t);
+    Thread.sleep(1000);
+    // BigRequestSizeSubscriber 예제에서는 onNext() 내부에서 아래와 같이 request 를 하지 않았다는 점과 비교해보셔야 합니다.
+    subscription.request(requestSize);
+    log.info("requestSize : {}", requestSize);
+  }
+
+  @Override
+  public void onError(Throwable t) {
+    log.error("error : {}", t.getMessage());
+  }
+
+  @Override
+  public void onComplete() {
+    log.info("=== (complete) ===");
+  }
+}
+```
+
+<br/>
+
+SmallSizeBackpressureSubscribing_FluxClient.java
+
+```
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure;
+
+import java.util.List;
+import reactor.core.publisher.Flux;
+
+public class SmallSizeBackpressureSubscribing_FluxClient {
+
+  public static void main(String[] args) {
+    getItems().subscribe(
+        new SmallSizeBackpressureSubscriber<>()
+    );
+  }
+
+  public static Flux<Integer> getItems(){
+    return Flux.fromIterable(List.of(1,2,3,4,5));
+  }
+}
+```
+
+<br/>
+
+출력결과
+
+```palin
+08:56:18.125 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure.SmallSizeBackpressureSubscriber -- (subscribe) --- 
+08:56:18.132 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure.SmallSizeBackpressureSubscriber --  >>> subscriber.request(1)
+08:56:18.138 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure.SmallSizeBackpressureSubscriber -- (next) item : 1
+08:56:19.150 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure.SmallSizeBackpressureSubscriber -- requestSize : 1
+08:56:19.150 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure.SmallSizeBackpressureSubscriber -- (next) item : 2
+08:56:20.167 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure.SmallSizeBackpressureSubscriber -- requestSize : 1
+08:56:20.168 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure.SmallSizeBackpressureSubscriber -- (next) item : 3
+08:56:21.174 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure.SmallSizeBackpressureSubscriber -- requestSize : 1
+08:56:21.174 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure.SmallSizeBackpressureSubscriber -- (next) item : 4
+08:56:22.175 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure.SmallSizeBackpressureSubscriber -- requestSize : 1
+08:56:22.175 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure.SmallSizeBackpressureSubscriber -- (next) item : 5
+08:56:23.185 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure.SmallSizeBackpressureSubscriber -- requestSize : 1
+08:56:23.188 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.smallsize_request_backpressure.SmallSizeBackpressureSubscriber -- === (complete) ===
+
+Process finished with exit code 0
+```
+
+<br/>
 
 
 
 ### Mono
+
+참고 : [prjectreactor.io - reference#mono](https://projectreactor.io/docs/core/release/reference/#mono)
+
+![](./img/project-reactor/mono.svg)
 
 Mono 는 0개 또는 1개의 요소를 전달합니다. 에러가 발생할 경우 Error 시그널을 전달한 후에 종료를 합니다. 만약 모든 요소를 전달했을 경우에는 Complete 시그널이 전달되면서 종료됩니다.<br/>
 

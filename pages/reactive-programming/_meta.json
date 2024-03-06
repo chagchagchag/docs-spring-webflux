@@ -2,7 +2,7 @@
     "intro": "intro",
     "what-is-reactive": "Reactive란?",
     "netflix-rxjava-story": "Netflix RxJava 이야기",
-    "reactive-streams": "Reactive Streams",
+    "reactive-streams": "Reactive Streams - Publisher, Subscriber 개념, 예제",
     "reactive-streams-libraries": "Reactive Streams 라이브러리들",
     "java-nio-bad-point": "Java NIO 의 논블로킹 방식 동기연산의 문제점",
     "what-is-epoll": "epoll 이란?",
