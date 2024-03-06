@@ -1,1 +1,124 @@
 ## Reactive Streams 라이브러리들
+
+## Reactive Streams 구현체 라이브러리들
+
+Reactive Streams 를 구현한 구현체 라이브러리들은 Project Reactor, RxJava, Mutiny 가 있습니다.
+
+- Project Reactor
+- RxJava
+- Mutiny
+
+
+
+**Project Reactor**<br/>
+
+Pivotal 사에서 개발한 라이브러리입니다. Spring Reactor 내에 포함되어 있습니다. Mono, Flux 라는 이름의 Publisher 클래스가 있습니다.<br/>
+
+
+
+**RxJava**<br/>
+
+Netflix에서 개발한 프레임워크입니다. 닷넷 프레임워크에서 지원되던 Reactive Extensions를 Java 버전으로 포팅한 프레임워크입니다. Flowable, Observable, Single, Maybe, Completable 라는 이름의 퍼블리셔 클래스가 있습니다.<br/>
+
+
+
+**Mutiny**<br/>
+
+Hibernate Reactive 에서 비동기 라이브러리로 제공하는 라이브러리입니다. 대표적인 자료형 및 클래스는 Multi, Uni 라고 하는 퍼블리셔 클래스가 있습니다. <br/>
+
+
+
+## Project Reactor
+
+![](./img/project-reactor/publishers.png)
+
+<br/>
+
+
+
+### Mono 와 Flux
+
+Mono 는 Optional\<T\> 를 상속받은(extends) 자료형입니다. (`Mono<T> : Optional<T>`)<br/>
+
+값이 없는 경우 또는 하나의 값을 명시적으로 의미하고자 할 때 Mono 를 사용합니다.  흔히 Mono\<Void\> 를 사용하는 경우는 특정 작업이 완료되는 파이프라인이라는 것을 명시적으로 표현하고자 할 때 사용합니다.
+
+<br/>
+
+Flux 는 List\<T\> 를 상속받은(extends) 자료형입니다. (Flux\<T\>: List\<T\>)<br/>
+
+무한한 값을 가리키거나 사이즈가 정해져있는 유한한 여러개의 요소들을 가리킬 때 Flux 를 사용합니다.<br/>
+
+
+
+### Flux
+
+Flux 는 0 \~ n 개의 요소들을 전달합니다. 에러가 발생할경우에는 Error 시그널을 전달한 후에 종료를 합니다. 만약 모든 요소를 전달했을 경우에는 Complete 시그널이 전달되면서 종료됩니다. Flux 는 Backpressure 를 지원합니다.<br/>
+
+Flux 를 Mono 로 바꿔야할 때가 있습니다. 아래의 두가지 방식으로 변환이 가능합니다.<br/>
+
+Mono.from(Flux) 를 사용할 경우
+
+- Flux 의 첫번째 요소만 Mono 에 전달됩니다.
+
+Flux.collectList() 를 사용
+
+- Flux.collectList() 를 사용해서 List 로 변환해서 이것을 Mono\<List\<T\>\> 자료형으로 변환한다면 Mono 타입의 List 로 변환이 가능합니다.
+
+<br/>
+
+
+
+#### 예제
+
+
+
+### Mono
+
+Mono 는 0개 또는 1개의 요소를 전달합니다. 에러가 발생할 경우 Error 시그널을 전달한 후에 종료를 합니다. 만약 모든 요소를 전달했을 경우에는 Complete 시그널이 전달되면서 종료됩니다.<br/>
+
+Mono 를 Flux 로 바꿔야 할 때가 있습니다. 이 경우 아래의 두 가지 방식으로 변환 가능합니다.<br/>
+
+Mono::flux() 함수를 사용할 경우
+
+- Mono\<List\<T\>\> 타입일 경우 이것을 flux() 함수를 이용해서 Flux\<List\<T\>\> 로 변환 가능합니다.
+- e.g. `getListItems().flux().subscribe(...)`
+
+Mono::flatMapMany() 함수를 사용할 경우 
+
+- Mono\<List\<T\>\> 타입일 경우 이것을 flatMapMany() 를 사용해서 Flux\<T\> 로 풀어서 사용가능합니다.
+- e.g. `getListItems().flatMapMany(v -> Flux.fromIterable(v)).subscribe(...)`
+
+<br/>
+
+
+
+#### 예제
+
+
+
+
+
+## RxJava
+
+### Flowable
+
+### Observable
+
+### Single
+
+### Maybe
+
+### Completable
+
+
+
+
+
+
+
+## Mutiny
+
+### Multi
+
+### Uni
+
