@@ -1,2 +1,135 @@
 ## Reactive 란?
 
+## Reactive Streams 의 발전 이력
+
+2011/06
+
+- MS 닷넷 프레임워크에서 Reactive Extensions 배포
+
+2013/02
+
+- Netflix 기술블로그에서 RxJava 공개 (v0.5)
+
+2013/09
+
+- Reactive manifesto v1 출시
+
+2013/11
+
+- Pivotal Project reactor 1.0.0 배포
+
+2014/09
+
+- Reactive manifesto v2 출시
+
+2014/11
+
+- Netflix RxJava v1.0 배포
+
+2015/04
+
+- Reactive Streams 1.0.0 이 Java 9 와 함께 배포
+- akka stream 1.0 배포
+
+2017/08
+
+- Reactive Streams 1.0.1 배포
+
+2021/07
+
+- Redhat 에서 mutiny 1.0 배포
+
+<br/>
+
+
+
+## Reactive Manifesto
+
+> 참고 : 
+>
+> - [Reactive Manifesto](https://www.reactivemanifesto.org/)
+> - [Reactive Manifesto - ko](https://www.reactivemanifesto.org/ko)
+
+<br/>
+
+
+
+[Reactive Manifesto - ko](https://www.reactivemanifesto.org/ko) 에서 제시하는 4가지의 Reactive 원칙은 아래와 같습니다.
+
+- Responsive (응답성)
+  -  [시스템](https://www.reactivemanifesto.org/ko/glossary#System) 이 가능한 한 즉각적으로 응답하는 것을 응답성이 있다고 합니다. 응답성은 사용자의 편의성과 유용성의 기초가 되지만, 그것뿐만 아니라 문제를 신속하게 탐지하고 효과적으로 대처할 수 있는 것을 의미합니다. 응답성 있는 시스템은 신속하고 일관성 있는 응답 시간을 제공하고, 신뢰할 수 있는 상한선을 설정하여 일관된 서비스 품질을 제공합니다. 이러한 일관된 동작은 오류 처리를 단순화하고, 일반 사용자에게 신뢰를 조성하고, 새로운 상호작용을 촉진합니다.
+- 탄력성(Resilient):
+  - 시스템이 [장애](https://www.reactivemanifesto.org/ko/glossary#Failure) 에 직면하더라도 응답성을 유지 하는 것을 탄력성이 있다고 합니다. 탄력성은 고가용성 시스템, 미션 크리티컬 시스템에만 적용되지 않습니다. 탄력성이 없는 시스템은 장애가 발생할 경우 응답성을 잃게 됩니다. 탄력성은 [복제](https://www.reactivemanifesto.org/ko/glossary#Replication), 봉쇄, [격리](https://www.reactivemanifesto.org/ko/glossary#Isolation), [위임](https://www.reactivemanifesto.org/ko/glossary#Delegation)에 의해 실현됩니다. 장애는 각각의 [구성 요소](https://www.reactivemanifesto.org/ko/glossary#Component) 에 포함되며 구성 요소들은 서로 분리되어 있기 때문에 이는 시스템이 부분적으로 고장이 나더라도, 전체 시스템을 위험하게 하지 않고 복구 할 수 있도록 보장합니다. 각 구성 요소의 복구 프로세스는 다른(외부의) 구성 요소에 위임되며 필요한 경우 복제를 통해 고가용성이 보장됩니다. 구성 요소의 클라이언트는 장애를 처리하는데에 압박을 받지 않습니다.
+- Elastic (유연성)
+  - 시스템이 작업량이 변화하더라도 응답성을 유지하는 것을 유연성이라고 합니다. 리액티브 시스템은 입력 속도의 변화에 따라 이러한 입력에 할당된 [자원](https://www.reactivemanifesto.org/ko/glossary#Resource)을 증가시키거나 감소키면서 변화에 대응합니다. 이것은 시스템에서 경쟁하는 지점이나 중앙 집중적인 병목 현상이 존재하지 않도록 설계하여, 구성 요소를 샤딩하거나 복제하여 입력을 분산시키는 것을 의미합니다. 리액티브 시스템은 실시간 성능을 측정하는 도구를 제공하여 응답성 있고 예측 가능한 규모 확장 알고리즘을 지원합니다. 이 시스템은 하드웨어 상품 및 소프트웨어 플랫폼에 비용 효율이 높은 방식으로 [유연성](https://www.reactivemanifesto.org/ko/glossary#Elasticity) 을 제공합니다.
+- Message Driven (메시지 기반)
+  - 리액티브 시스템은 [비동기](https://www.reactivemanifesto.org/ko/glossary#Asynchronous) [메시지 전달](https://www.reactivemanifesto.org/ko/glossary#Message-Driven) 에 의존하여 구성 요소 사이에서 느슨한 결합, 격리, [위치 투명성](https://www.reactivemanifesto.org/ko/glossary#Location-Transparency) 을 보장하는 경계를 형성합니다. 이 경계는 [장애](https://www.reactivemanifesto.org/ko/glossary#Failure) 를 메시지로 지정하는 수단을 제공합니다. 명시적인 메시지 전달은 시스템에 메시지 큐를 생성하고, 모니터링하며 필요시 [배압](https://www.reactivemanifesto.org/ko/glossary#Back-Pressure) 을 적용함으로써 유연성을 부여하고, 부하 관리와 흐름제어를 가능하게 합니다. 위치 투명 메시징을 통신 수단으로 사용하면 단일 호스트든 클러스터를 가로지르든 동일한 구성과 의미를 갖고 장애를 관리할 수 있습니다. [논블로킹](https://www.reactivemanifesto.org/ko/glossary#Non-Blocking) 통신은 수신자가 활성화가 되어 있을 때만 [자원](https://www.reactivemanifesto.org/ko/glossary#Resource) 을 소비할 수 있기 때문에 시스템 부하를 억제할 수 있습니다.
+
+
+
+큰 시스템은 더 작은 규모의 시스템들로 구성되어 있기 때문에 구성 요소의 리액티브 특성에 의존합니다. 즉, 리액티브 시스템은 설계 원칙을 적용하고, 이 특성을 모든 규모에 적용하여, 그 구성 요소를 합성 할 수 있게 하는 것을 의미합니다. 세계에서 가장 거대한 시스템은 이러한 특성에 기반을 둔 아키텍처에 의존하여 매일 수십억명의 요구를 처리합니다. 이러한 설계 원칙을 매번 재발견하는 것을 그만두고 처음부터 의식하여 적용할 때 입니다.
+
+<br/>
+
+
+
+## Reactive Programming 용어집
+
+[Reactive Manifesto/ko - glossary (용어집)]("비동기적으로 메시지를 주고 받으며 독립적으로 실행됨을 보장해야 한다") 에서는 Reactive Programming 에서 언급하는 용어들인 비동기, 배압(Back-Pressure), Batching, 컴포넌트, 위임, 탄력성, 장애, 분리, 위치투명성, 메시지 기반(Message Driven), 논블로킹(Non Blocking), 프로토콜, 복제, 자원, 확장성, 시스템, 사용자와 같은 용어들을 설명하고 있습니다. Reactive Manifesto 라는 선언문을 읽을 때보다 용어집을 읽는 것이 오히려 더 이해가 잘 될 수 있기에 이것에 대해 언급하고 넘어갑니다.<br/>
+
+취업을 준비중인 입장이라 별도의 용어를 설명할 시간이 부족하기에 용어를 정리하는 것은 이번 문서에서는 건너뛰도록 하겠습니다. 추후 시간이 된다면 용어 역시 정리를 하도록 하겠습니다.<br/>
+
+<br/>
+
+
+
+## 명령형 프로그래밍의 단점
+
+명령형 프로그래밍은 의도가 명확히 보인다는 점과 결과(리턴)값 기반으로 동작한다는 점에서 이해하기 쉽다는 점은 있습니다.<br/>
+
+하지만, IO 작업이 갈수록 많아질 수록 명령형 처리의 경우 어떤 서비스가 특정 서비스의 결과값에 의존하게 되어야 하거나 특정 함수가 다른 함수의 IO 결과 값에 의존해야 합니다. 이 과정에서 서비스 또는 함수와 함수간의 경계가 모호해집니다. 그리고 독립성이 깨지면서 특정 리턴 값의 결과값에 대해 의존성이 생기게 됩니다.<br/>
+
+Netflix 의 RxJava 도입기를 보듯 서비스가 커진다면 Reactive Manifesto 기반의 시스템 적용을 고려하게 됩니다.<br/>
+
+
+
+## Reactive Manifesto 적용 
+
+Java 환경에서 Reactive Manifesto 기반의 시스템으로 전환할 때 아래의 3 종류의 선택지를 고려하게 될 가능성이 높습니다. <br/>
+
+Stream, Future 를 사용할 때 모두 Backpressure 가 관리하는 점이 주요 맹점인데, Stream, Future 를 사용할 경우 이 부분에 대해 별도로 관리할 방안이 없기에 프로그래머가 직접 ExecutorService 등을 활용해서 배압관리를 해줘야 합니다.<br/>
+
+**Stream 기반의 흐름제어** : 적용 불가
+
+- "비동기적으로 메시지를 주고 받으며 독립적으로 실행됨을 보장해야 한다"
+  - Stream 은 동기적으로 이루어지기에 비동기적으로 수행해야 한다는 특성에 어긋나게 됩니다.
+  - 하나의 Stream 과 다른 Stream 을 연결해서 사용할 때 서로 결과값을 알아야 하는 동기 방식의 동작을 하게 되고, 최종 결과 포인트인 caller 측면에서는 collect 를 통해서 결과를 조회해야 합니다. 
+- Message Driven
+  - Stream 을 메시지 큐 처럼 사용해서 Message Driven 처럼 사용할 수 있습니다.
+- 배압(Back-Pressure) 관리 - 부하관리
+  - Stream 을 사용할 경우 부하를 관리하지 못합니다.
+
+<br/>
+
+**Future 기반의 흐름제어** : 적용 불가
+
+- "비동기적으로 메시지를 주고 받으며 독립적으로 실행됨을 보장해야 한다"
+  - Future 기반의 흐름제어시 caller 와 callee 는 비동기적으로 동작합니다.
+- Message Driven
+  - Future 하나만으로는 메시지 큐의 역할을 할 수 없습니다.
+- 배압(Back-Pressure) 관리 - 부하관리
+  - Future 하나만으로는 부하를 관리하는 배압(Back-Pressure) 를 적용할 수 없습니다.
+
+<br/>
+
+**Reactive Stream** : 적용 가능
+
+- "비동기적으로 메시지를 주고 받으며 독립적으로 실행됨을 보장해야 한다"
+  - callee 는 최종적으로 Publisher 를 반환합니다. caller 는 Subscriber 를 등록합니다. caller 와 callee 는 각각 Publisher, Subscriber 만 바라보면 되고 서로의 결과값을 알고 있을 필요는 없습니다.
+- Message Driven
+  - Publisher 는 내부적으로 메시지 대기열을 생성해서 관리합니다.
+- 배압(Back-Pressure) - 부하관리
+  - Reactive Streams 는 Back-Pressure 를 관리할 수 있는 방법이 내부적으로 갖춰져있습니다.
+
+<br/>
+
