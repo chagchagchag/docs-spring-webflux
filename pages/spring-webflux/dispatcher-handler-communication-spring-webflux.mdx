@@ -293,9 +293,27 @@ public interface ServerWebExchange {
 
 ## WebHandler
 
-ServerWebExchange 단위로 요청을 받으며, WebHandler 내에서 ServerWebExchanbe 객체를 통해 request, response 에 접근 가능합니다.
+ServerWebExchange 단위로 요청을 받으며, WebHandler 내에서 ServerWebExchanbe 객체를 통해 request, response 에 접근 가능합니다.<br/>
 
-예를 들면 제일 처음에 봤던 예제인 아래 코드처럼 작성될 수 있습니다.
+WebHandler 는 외부로부터 요청이 왔을 때 Reactor Netty와 Dispatcher Handler 를 거쳐서 DispatcherHandler 가 HandlerAdapter 를 찾습니다. 이후 해당 HandlerAdapter의 handle() 메서드 호출시 WebHandlerAdapter 가 적절한 WebHandler를 찾은 후 WebHandler 의 handle() 메서드를 호출하는데, 여기에서 WebHandler의 handle() 메서드를 호출하기 전에 WebFilter의 filter() 가 호출됩니다. 그리고 익셉션 등이 발생할 경우에는 WebExceptionHandler 의 handle() 메서드를 호출하게 됩니다.<br/>
+
+![](./img/dispatcher-handler-communication-spring-webflux/webhandler.png)
+
+<br/>
+
+
+
+### HttpHandler
+
+HttpHandler 는 WebHandler 보다 row level 에서 동작하는 Handler 입니다. 그래서 httpHandler 내에서 조금더 상위 버전인 webHandler 를 바인딩해서 기능을 확장했습니다. 자세한 내용은 [An introduction to Reactive Web](https://hantsy.github.io/spring-reactive-sample/web/intro.html) 을 참고하시기 바랍니다.<br/>
+
+![](./img/dispatcher-handler-communication-spring-webflux/httphandleradapter.png)
+
+<br/>
+
+
+
+예를 들어서 HttpHandler 를 직접 작성해서 ReactiveHttpHandlerAdapter 에 바인딩한 후 HttpServer 에 이 HandlerAdapter 를 지정해서 서버를 직접 구동하는 코드는 아래와 같습니다.
 
 ```java
 package io.chagchagchag.example.foobar.spring_webflux;
@@ -353,11 +371,9 @@ public class WebHandlerExample1_AcceptOnlyJson {
 
 ```
 
+코드를 요약해보면 이렇습니다.<br/>
+
 WebHandler 를 생성한 후 HttpHandler에 바인딩했습니다. 그리고 생성한 HttpHandler 는 ReactiveHttpHandlerAdapter 내에 바인딩했고, 이렇게 생성한 adapter 는 HttpServer 객체 내에 handle() 메서드를 통해 HttpHandler 를 바인딩합니다.<br/>
-
-HttpHandler 는 WebHandler 보다 row level 에서 동작하는 Handler 입니다. 그래서 httpHandler 내에서 조금더 상위 버전인 webHandler 를 바인딩해서 기능을 확장했습니다. 자세한 내용은 [An introduction to Reactive Web](https://hantsy.github.io/spring-reactive-sample/web/intro.html) 을 참고하시기 바랍니다.<br/>
-
-![](./img/dispatcher-handler-communication-spring-webflux/httphandleradapter.png)
 
 <br/>
 
@@ -367,7 +383,7 @@ HttpHandler 는 WebHandler 보다 row level 에서 동작하는 Handler 입니�
 
 ServerWebExchange 객체로 접근할 수 있는 요청/응답 객체인 ServerHttpRequest, ServerHttpResponse 객체에 대해서 알아봅니다.<br/>
 
-위에서 이야기했듯 Reactor Netty 기반의 Spring 환경에서는 HttpServerRequest, HttpServerResponse 객체를 요청/응답 객체로 사용합니다. [ServerHttpRequest](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/server/reactive/ServerHttpRequest.html), [ServerHttpResponse](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/server/reactive/ServerHttpResponse.html) interface 는 아래와 같이 [HttpMessage](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/HttpMessage.html) 라는 interface 라는 상위타입으로 대체가 가능합니다.
+위에서 이야기했듯 Reactor Netty 기반의 Spring 환경에서는 HttpServerRequest, HttpServerResponse 객체를 요청/응답 객체로 사용합니다. [ServerHttpRequest](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/server/reactive/ServerHttpRequest.html), [ServerHttpResponse](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/server/reactive/ServerHttpResponse.html) interface 는 아래와 같이 상위타입인 [HttpMessage](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/HttpMessage.html)  interface 로 대체가 가능합니다.
 
 ![](./img/dispatcher-handler-communication-spring-webflux/serverhttprequest-serverhttpresponse.png)
 
@@ -377,89 +393,35 @@ ServerWebExchange 객체로 접근할 수 있는 요청/응답 객체인 ServerH
 
 ### ServerHttpRequest
 
-ServerHttpRequest 의 정의는 아래와 같다.
+ServerHttpRequest 로 접근 가능한 메서드들은 아래와 같습니다.
 
-```java
-/*
- * Copyright 2002-2021 the original author or authors.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+![](./img/dispatcher-handler-communication-spring-webflux/serverhttprequest.png)
 
-package org.springframework.http.server.reactive;
-
-import java.net.InetSocketAddress;
-import java.net.URI;
-import java.util.function.Consumer;
-
-import org.springframework.http.HttpCookie;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpRequest;
-import org.springframework.http.ReactiveHttpInputMessage;
-import org.springframework.http.server.RequestPath;
-import org.springframework.lang.Nullable;
-import org.springframework.util.MultiValueMap;
-
-public interface ServerHttpRequest extends HttpRequest, ReactiveHttpInputMessage {
-	String getId();
-	RequestPath getPath();
-	MultiValueMap<String, String> getQueryParams();
-	MultiValueMap<String, HttpCookie> getCookies();
-
-	@Nullable
-	default InetSocketAddress getLocalAddress() {
-		return null;
-	}
-
-	@Nullable
-	default InetSocketAddress getRemoteAddress() {
-		return null;
-	}
-
-	@Nullable
-	default SslInfo getSslInfo() {
-		return null;
-	}
-
-	default ServerHttpRequest.Builder mutate() {
-		return new DefaultServerHttpRequestBuilder(this);
-	}
-
-	interface Builder {
-		Builder method(HttpMethod httpMethod);
-		Builder uri(URI uri);
-		Builder path(String path);
-		Builder contextPath(String contextPath);
-		Builder header(String headerName, String... headerValues);
-		Builder headers(Consumer<HttpHeaders> headersConsumer);
-		Builder sslInfo(SslInfo sslInfo);
-		Builder remoteAddress(InetSocketAddress remoteAddress);
-		ServerHttpRequest build();
-	}
-
-}
-```
-
+- getCookies() : 클라이언트가 전달하는 read only 쿠키를 Map 으로 제공
 - getPath() : query 를 포함되지 않은 path 를 리턴
 - getQueryParams() : decoded 된 query parameter map 을 return
-- getCookies() : 클라이언트가 전달하는 read only 쿠키를 Map 으로 제공
-- mutate() : default 로 선언된 메서드. uri, path, header 등을 변경할 수 있는 ServerHttpRequest Builder 를 제공
-- getBody() : 클라이언트가 전달하는 request body를 Flux\<DataBuffer\> 형태로 수신합니다. Flux 이므로 DataBuffer 가 여러번에 걸쳐서 전달됨을 유추 가능합니다.
-- getHeaders() : HttpHeaders 객체에 접근하는 메서드. [HttpHeaders](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/HttpHeaders.html) 클래스는 헤더 추가, 삭제 등 헤더에 관련된 유용한 메서드 들이 존재합니다. 
+- mutate() : 
+  - default 로 선언된 메서드. 
+  - uri, path, header 등을 변경할 수 있는 ServerHttpRequest Builder 를 제공
+  - ServerHttpRequest 자신을 Builder로 변경할수 있도록 제공되는 메서드
+  - ServerHttpRequest 에 접근할 수 있는 ServerWebExchange 타입 역시 Builder로 변경할 수 있는 메서드인 mutate() 함수를 제공합니다.
 
-- getMethod() : HTTP 요청 메서드를 파악할 때 사용
-- getURI() : query param 이 모두 포함된 전체 URI 정보를 return
+- getBody() : 
+  - 상위타입인 ReactiveHttpInputMessage 타입에서 제공되는 메서드입니다. 
+  - 클라이언트가 전달하는 request body를 Flux\<DataBuffer\> 형태로 수신합니다. Flux 이므로 DataBuffer 가 여러번에 걸쳐서 전달됨을 유추 가능합니다.
+
+- getMethod() 
+  - 상위타입인 HttpRequest 타입에서 제공하는 메서드 입니다.
+  - HTTP 요청 메서드를 파악할 때 사용합니다.
+
+- getURI()
+  - 상위타입인 HttpRequest 에서 제공하는 메서드 입니다. 
+  - query param 이 모두 포함된 전체 URI 정보를 return
+
+- getHeaders()
+  - 상위타입인 HttpMessage 타입에서 제공하는 메서드입니다. 
+  - HttpHeaders 객체에 접근하는 메서드. [HttpHeaders](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/HttpHeaders.html) 클래스는 헤더 추가, 삭제 등 헤더에 관련된 유용한 메서드 들이 존재합니다. 
+
 
 <br/>
 
@@ -527,4 +489,24 @@ public class URIExample1 {
 
 
 ### ServerHttpResponse
+
+ServerHttpResponse 로 접근 가능한 주요 메서드 들은 아래와 같습니다.
+
+![](./img/dispatcher-handler-communication-spring-webflux/serverhttpresponse.png)
+
+
+
+- addCookie(ResponseCode) : Cookie 를 추가하는 데에 사용합니다.
+- setStatusCode(HttpStatusCode) : status 를 지정할 때 사용합니다.
+- getStatusCode() : status 를 받아올때 사용합니다.
+- setComplete() : Response 의 Content 를 추가하기 전에 complete 하도록 하는 메서드 입니다.
+- getHeaders() : HttpHeaders 를 return 합니다. HttpHeaders 를 사용하면 header 추가/수정/삭제를 수행가능합니다.
+
+
+
+
+
+
+
+
 
