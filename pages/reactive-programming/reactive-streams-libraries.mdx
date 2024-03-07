@@ -42,6 +42,17 @@ Reference Guide 는 [projectreactor.io - reference](https://projectreactor.io/do
 
 
 
+### gradle 의존성
+
+```kotlin
+// reactor-core
+implementation("io.projectreactor:reactor-core:3.6.2")
+```
+
+<br/>
+
+
+
 ### Mono 와 Flux
 
 Mono 는 Optional\<T\> 를 상속받은(extends) 자료형입니다. (`Mono<T> : Optional<T>`)<br/>
@@ -811,11 +822,191 @@ Netflix에서 개발한 프레임워크입니다. 닷넷 프레임워크에서 �
 
 ## Mutiny
 
+> Mutiny 공식 도큐먼트 : [https://smallrye.io/smallrye-mutiny/latest/](https://smallrye.io/smallrye-mutiny/latest/)<br/>
+
 Hibernate Reactive 에서 비동기 라이브러리로 제공하는 라이브러리입니다. 대표적인 자료형 및 클래스는 Multi, Uni 라고 하는 퍼블리셔 클래스가 있습니다. <br/>
+
+
+
+### Multi 와 Uni
+
+Multi 는 Reactor 의 Flux 와 유사한 특징을 가지는  Publisher 클래스입니다. Multi 에는 0 \~ n 개의 item 을 전달 가능하고 에러가 발생할 경우 Error 시그널을 전달하면서 종료를 합니다. 만약 모든 item 을 전달했을 경우에는 Complete 시그널을 전달하면서 종료합니다. Multi 역시 Backpressure 를 지원합니다.<br/>
+
+Uni 는 Reactor 의 Mono 와 유사한 특징을 가지는 Publisher 클래스입니다. Uni 에는 0 \~ 1 개의 item 을 전달 가능하고 에러가 발생할 경우 Error 시그널을 전달하면서 종료를 합니다. 만약 모든 item 을 전달했을 경우에는 Complete 시그널을 전달하면서 종료합니다. <br/>
+
+
+
+### gradle 의존성
+
+```kotlin
+// mutiny
+implementation("io.smallrye.reactive:mutiny:2.5.7")
+```
+
+
 
 
 
 ### Multi
 
+MultiClient.java
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.mutiny.multi;
+
+import io.smallrye.mutiny.Multi;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class MultiClient {
+  public static void main(String[] args) {
+    getItems()
+        .subscribe()
+        .withSubscriber(new SimpleMultiSubscriber<>(1024));
+  }
+
+  public static Multi<Integer> getItems(){
+    return Multi.createFrom().items(1,2,3,4,5);
+  }
+}
+```
+
+<br/>
+
+
+
+SimpleMultiSubscriber.java
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.mutiny.multi;
+
+import io.smallrye.mutiny.subscription.MultiSubscriber;
+import java.util.concurrent.Flow.Subscription;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@RequiredArgsConstructor
+public class SimpleMultiSubscriber <T> implements MultiSubscriber<T> {
+  private final Integer requestSize;
+  @Override
+  public void onItem(T t) {
+    log.info("item == {}", t);
+  }
+
+  @Override
+  public void onFailure(Throwable throwable) {
+    log.error("fail, mesage = {}", throwable.getMessage());
+  }
+
+  @Override
+  public void onCompletion() {
+    log.info("complete");
+  }
+
+  @Override
+  public void onSubscribe(Subscription subscription) {
+    subscription.request(requestSize);
+    log.info("subscribe");
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+10:54:17.883 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.mutiny.multi.SimpleMultiSubscriber -- item == 1
+10:54:17.898 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.mutiny.multi.SimpleMultiSubscriber -- item == 2
+10:54:17.898 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.mutiny.multi.SimpleMultiSubscriber -- item == 3
+10:54:17.898 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.mutiny.multi.SimpleMultiSubscriber -- item == 4
+10:54:17.898 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.mutiny.multi.SimpleMultiSubscriber -- item == 5
+10:54:17.898 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.mutiny.multi.SimpleMultiSubscriber -- complete
+10:54:17.898 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.mutiny.multi.SimpleMultiSubscriber -- subscribe
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
 ### Uni
+
+UniClient.java
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.mutiny.uni;
+
+import io.smallrye.mutiny.Uni;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class UniClient {
+  public static void main(String[] args) {
+    getItems()
+        .subscribe()
+        .withSubscriber(
+            new SimpleUniSubscriber<>(1024)
+        );
+  }
+
+  public static Uni<Integer> getItems(){
+    return Uni.createFrom().item(-1);
+  }
+}
+
+```
+
+<br/>
+
+SimpleUniSubscriber.java
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.mutiny.uni;
+
+import io.smallrye.mutiny.subscription.UniSubscriber;
+import io.smallrye.mutiny.subscription.UniSubscription;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@RequiredArgsConstructor
+public class SimpleUniSubscriber<T> implements UniSubscriber<T> {
+  private final Integer count;
+  private UniSubscription subscription;
+  @Override
+  public void onSubscribe(UniSubscription uniSubscription) {
+    this.subscription = uniSubscription;
+    subscription.request(1);
+    log.info("subscribe");
+  }
+
+  @Override
+  public void onItem(T t) {
+    log.info("item : {}", t);
+  }
+
+  @Override
+  public void onFailure(Throwable throwable) {
+    log.error("error, message = {}", throwable.getMessage());
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+11:01:35.633 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.mutiny.uni.SimpleUniSubscriber -- subscribe
+11:01:35.639 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.mutiny.uni.SimpleUniSubscriber -- item : -1
+
+Process finished with exit code 0
+```
 
