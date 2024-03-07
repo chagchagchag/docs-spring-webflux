@@ -296,6 +296,266 @@ Process finished with exit code 0
 
 
 
+#### 예제 3) error 발생하면 곧바로 중지
+
+onComplete() 호출이 되지 않고 바로 중지되는 것을 확인 가능합니다.
+
+FluxErrorClient1.java
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.error;
+
+import io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class FluxErrorClient1 {
+  public static void main(String[] args) {
+    log.info("main function started");
+    getItems()
+        .subscribe(
+            new SimpleSubscriber<>(Integer.MAX_VALUE)
+        );
+    log.info("main function end");
+  }
+
+  public static Flux<Integer> getItems(){
+    return Flux.create(fluxSink -> {
+      fluxSink.next(0);
+      fluxSink.next(1);
+      var error = new IllegalStateException("Error 발생");
+      fluxSink.error(error);
+    });
+  }
+}
+```
+
+<br/>
+
+출력결과
+
+```plain
+09:33:15.405 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.error.FluxErrorClient1 -- main function started
+09:33:15.519 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (subscribe) --- 
+09:33:15.519 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber --  >>> subscriber.request(2147483647)
+09:33:15.523 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (next) item : 0
+09:33:16.529 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (next) item : 1
+09:33:17.547 [main] ERROR io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- error : Error 발생
+09:33:17.547 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.error.FluxErrorClient1 -- main function end
+```
+
+<br/>
+
+SimpleSubscriber.java
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor;
+
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
+@Slf4j
+@RequiredArgsConstructor
+public class SimpleSubscriber<T> implements Subscriber<T> {
+  private final Integer requestSize;
+  @Override
+  public void onSubscribe(Subscription s) {
+    log.info("(subscribe) --- ");
+    s.request(requestSize);
+    log.info(" >>> subscriber.request({})", requestSize);
+  }
+
+  @SneakyThrows
+  @Override
+  public void onNext(T t) {
+    log.info("(next) item : {}", t);
+    Thread.sleep(1000);
+  }
+
+  @Override
+  public void onError(Throwable t) {
+    log.error("error : {}", t.getMessage());
+  }
+
+  @Override
+  public void onComplete() {
+    log.info("=== (complete) ===");
+  }
+}
+```
+
+<br/>
+
+
+
+#### 예제 4) complete - complete 시그널 발생시 종료
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.complete;
+
+import io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class FluxCompleteClient {
+  public static void main(String[] args) {
+    log.info("main function started");
+    getItems()
+        .subscribe(
+            new SimpleSubscriber<>(Integer.MAX_VALUE)
+        );
+    log.info("main function end");
+  }
+
+  public static Flux<Integer> getItems(){
+    return Flux.create(fluxSink -> {
+      fluxSink.complete();
+    });
+  }
+}
+```
+
+
+
+출력결과
+
+```plain
+09:39:21.752 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.complete.FluxCompleteClient -- main function started
+09:39:21.845 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (subscribe) --- 
+09:39:21.846 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber --  >>> subscriber.request(2147483647)
+09:39:21.851 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- === (complete) ===
+09:39:21.851 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.complete.FluxCompleteClient -- main function end
+```
+
+<br/>
+
+
+
+SimpleSubscriber.java
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor;
+
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
+@Slf4j
+@RequiredArgsConstructor
+public class SimpleSubscriber<T> implements Subscriber<T> {
+  private final Integer requestSize;
+  @Override
+  public void onSubscribe(Subscription s) {
+    log.info("(subscribe) --- ");
+    s.request(requestSize);
+    log.info(" >>> subscriber.request({})", requestSize);
+  }
+
+  @SneakyThrows
+  @Override
+  public void onNext(T t) {
+    log.info("(next) item : {}", t);
+    Thread.sleep(1000);
+  }
+
+  @Override
+  public void onError(Throwable t) {
+    log.error("error : {}", t.getMessage());
+  }
+
+  @Override
+  public void onComplete() {
+    log.info("=== (complete) ===");
+  }
+}
+```
+
+
+
+#### 예제 5) Flux → Mono  (Mono.from(Flux))
+
+Mono.from(Flux) 를 사용할 경우
+
+- Flux 의 첫번째 요소만 Mono 에 전달됩니다.
+
+
+
+예제
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.flux_to_mono;
+
+import io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+public class FluxToMonoClient_MonoFrom {
+  public static void main(String[] args) {
+    log.info("main function started");
+    Mono
+        .from(getItems())
+        .subscribe(
+            new SimpleSubscriber<>(Integer.MAX_VALUE)
+        );
+    log.info("main function end");
+  }
+
+  public static Flux<Integer> getItems(){
+    return Flux.fromIterable(List.of(1,2,3,4,5));
+  }
+}
+
+```
+
+<br/>
+
+
+
+#### 예제 6) Flux → Mono (Mono.from(Flux.collectList()))
+
+Flux.collectList() 를 사용
+
+- Flux.collectList() 를 사용해서 List 로 변환해서 이것을 Mono\<List\<T\>\> 자료형으로 변환한다면 Mono 타입의 List 로 변환이 가능합니다.
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.flux_to_mono;
+
+import io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+public class FluxToMonoClient_Flux_collectList {
+  public static void main(String[] args) {
+    log.info("main function started");
+    Mono
+        .from(getItems().collectList())
+        .subscribe(new SimpleSubscriber<>(Integer.MAX_VALUE));
+    log.info("main function end");
+  }
+
+  public static Flux<Integer> getItems(){
+    return Flux.fromIterable(List.of(1,2,3,4,5));
+  }
+}
+```
+
+<br/>
+
+
+
 ### Mono
 
 참고 : [prjectreactor.io - reference#mono](https://projectreactor.io/docs/core/release/reference/#mono)
