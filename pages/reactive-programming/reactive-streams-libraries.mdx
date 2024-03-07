@@ -30,6 +30,8 @@ Hibernate Reactive 에서 비동기 라이브러리로 제공하는 라이브러
 
 ## Project Reactor
 
+Pivotal 사에서 개발한 라이브러리입니다. Spring Reactor 내에 포함되어 있습니다. Mono, Flux 라는 이름의 Publisher 클래스가 있습니다.<br/>
+
 Project Reactor 의 Official Website 는 [projectreactor.io](https://projectreactor.io/)이고
 
 Reference Guide 는 [projectreactor.io - reference](https://projectreactor.io/docs/core/release/reference/) 입니다.
@@ -580,13 +582,216 @@ Mono::flatMapMany() 함수를 사용할 경우
 
 
 
-#### 예제
+#### 예제 1) Subscriber 
+
+Mono 는 1개의 item만 전달하므로 next() 가 한번만 실행되면 바로 complete 가 호출되는 것이 보장됩니다.  그리고 값을 전달하지 않고도 complete 를 할 경우 값이 없다는 것을 의미합니다.<br/>
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.mono;
+
+import io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+public class SimpleMonoClient {
+  @SneakyThrows
+  public static void main(String[] args) {
+    log.info("main function started");
+    getITems().subscribe(
+        new SimpleSubscriber<>(Integer.MAX_VALUE)
+    );
+    log.info("main function end");
+  }
+
+  public static Mono<Integer> getITems(){
+    return Mono.create(monoSink -> {
+      monoSink.success(1);
+    });
+  }
+}
+```
+
+<br/>
 
 
+
+SimpleSubscriber.java
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor;
+
+import lombok.RequiredArgsConstructor;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
+@Slf4j
+@RequiredArgsConstructor
+public class SimpleSubscriber<T> implements Subscriber<T> {
+  private final Integer requestSize;
+  @Override
+  public void onSubscribe(Subscription s) {
+    log.info("(subscribe) --- ");
+    s.request(requestSize);
+    log.info(" >>> subscriber.request({})", requestSize);
+  }
+
+  @SneakyThrows
+  @Override
+  public void onNext(T t) {
+    log.info("(next) item : {}", t);
+    Thread.sleep(1000);
+  }
+
+  @Override
+  public void onError(Throwable t) {
+    log.error("error : {}", t.getMessage());
+  }
+
+  @Override
+  public void onComplete() {
+    log.info("=== (complete) ===");
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+10:40:03.253 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.mono.SimpleMonoClient -- main function started
+10:40:03.355 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (subscribe) --- 
+10:40:03.356 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber --  >>> subscriber.request(2147483647)
+10:40:03.360 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (next) item : 1
+10:40:04.386 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- === (complete) ===
+10:40:04.387 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.mono.SimpleMonoClient -- main function end
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+#### 예제 2) Mono → Flux (flux())
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.mono_to_flux;
+
+import io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+public class MonoToFluxClient_flux {
+  public static void main(String[] args) {
+    log.info("main function started");
+
+    getItems()
+        .flux()
+        .subscribe(new SimpleSubscriber<>(Integer.MAX_VALUE));
+
+    log.info("main function end");
+  }
+
+  public static Mono<List<Integer>> getItems(){
+    return Mono.just(List.of(1,2,3,4,5));
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+10:36:36.575 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.mono_to_flux.MonoToFluxClient_flux -- main function started
+10:36:36.685 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (subscribe) --- 
+10:36:36.685 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber --  >>> subscriber.request(2147483647)
+10:36:36.687 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (next) item : [1, 2, 3, 4, 5]
+10:36:37.691 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- === (complete) ===
+10:36:37.691 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.mono_to_flux.MonoToFluxClient_flux -- main function end
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+#### 예제 3) Mono → Flux (flatMapMany())
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.mono_to_flux;
+
+import io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber;
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+public class MonoToFluxClient_flatMapMany {
+  public static void main(String[] args) {
+    log.info("main function started");
+
+    getItems()
+        .flatMapMany(
+            list -> Flux.fromIterable(list)
+        )
+        .subscribe(
+            new SimpleSubscriber<>(Integer.MAX_VALUE)
+        );
+
+    log.info("main function end");
+  }
+
+  public static Mono<List<Integer>> getItems(){
+    return Mono.just(List.of(1,2,3,4,5));
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+10:37:03.180 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.mono_to_flux.MonoToFluxClient_flatMapMany -- main function started
+10:37:03.297 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (subscribe) --- 
+10:37:03.298 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber --  >>> subscriber.request(2147483647)
+10:37:03.299 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (next) item : 1
+10:37:04.302 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (next) item : 2
+10:37:05.316 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (next) item : 3
+10:37:06.320 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (next) item : 4
+10:37:07.320 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- (next) item : 5
+10:37:08.335 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.SimpleSubscriber -- === (complete) ===
+10:37:08.335 [main] INFO io.chagchagchag.example.foobar.reactive_streams_libraries.reactor.mono_to_flux.MonoToFluxClient_flatMapMany -- main function end
+
+Process finished with exit code 0
+```
+
+<br/>
 
 
 
 ## RxJava
+
+Netflix에서 개발한 프레임워크입니다. 닷넷 프레임워크에서 지원되던 Reactive Extensions를 Java 버전으로 포팅한 프레임워크입니다. Flowable, Observable, Single, Maybe, Completable 라는 이름의 퍼블리셔 클래스가 있습니다.<br/>
+
+
 
 ### Flowable
 
@@ -605,6 +810,10 @@ Mono::flatMapMany() 함수를 사용할 경우
 
 
 ## Mutiny
+
+Hibernate Reactive 에서 비동기 라이브러리로 제공하는 라이브러리입니다. 대표적인 자료형 및 클래스는 Multi, Uni 라고 하는 퍼블리셔 클래스가 있습니다. <br/>
+
+
 
 ### Multi
 
