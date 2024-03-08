@@ -46,11 +46,94 @@ DefaultServerWebExchange 클래스 내의 getReader() 메서드 내의 구현을
 
 Spring Webflux 에서 자주 쓰이는 대표적인 Decoder, Reader 들을 정리해봅니다.
 
+### 기본자료형 Decoder 
+
+- ByteArrayDecoder : DataBuffer 를 byte array 로 decode 하는 decoder 입니다.
+- ByteBufferDecoder : DataBuffer 를 `java.nio.ByteBuffer` 로 decode 하는 decoder 입니다.
+- DataBufferDecoder : DataBuffer 를 DataBuffer 로 decode 하는 decoder 입니다.
+- NettyByteBufDecoder : DataBuffer 를 `io.netty.buffer.ByteBuf` 로 decode 하는 decoder 입니다.
+- ResourceDecoder : DataBuffer 를 Spring 의 Resource 로 decode 하는 decoder 입니다.
+- StringDecoder : DataBuffer 를 String 으로 decode 하는 decoder 입니다.
+- ProtobufDecoder : DataBuffer 를 `com.google.protobuf.Message` 로 decode 하는 decoder 입니다. `decode.google.protobuf` 라이브러리가 있을 때에만 등록됩니다.
+
+<br/>
+
+### 객체 Serialization 관련 Decoder
+
+- Jackson2JsonDecoder : jackson 라이브러리로 json 형태의 DataBuffer 를 객체로 decode 하는 Decoder 입니다. jackson 라이브러리가 있을 때에만 등록됩니다.
+- KotlinSerializationJsonDecoder : `kotlinx.serialization` 라이브러리를 사용해서 json 형태의 DataBuffer 를 특정 객체 타입으로 decode 하는 decoder 입니다. `kotlinx.serialization` 라이브러리가 잇을 때에만 등록됩니다.
+- Jackson2SmileDecoder : jackson 라이브러리를 사용해서 smail 형태의 DataBuffer 를 객체로 decode 하는 Decoder 입니다. `jackson-smile` 라이브러리가 있을 경우에만 등록됩니다.
+- Jaxb2XmlDecoder : jaxb 를 사용해서 xml 형태의 DataBuffer 를 객체로 decode 하는 Decoder 입니다. jaxb 라이브러리가 있을 경우에만 등록됩니다.
+
+<br/>
+
+### Reader
+
+- FormHttpMessaeReader : `application/x-www-form-urlencoded` 인 MediaType 에 대해 form 을 `MultiValueMap<String, String>` 형태로 읽어들이는 Reader 입니다.
+- DefaultPartHttpMessageReader : `multipart/form-data` 인 MediaType 에 대해 Part 를 stream 형태로 읽어들이는 Reader 입니다.
+- MultipartHttpMessageReader : `multipart/form-data` 인 MediaType 에 대해 `MultiValueMap<String, String>` 형태로 읽어들이는 Reader 입니다.
+
+<br/>
+
 
 
 ## Encoder, Writer
 
 Spring Webflux 에서 자주 쓰이는 대표적인 Encoder, Writer 들을 정리해봅니다.
+
+### 기본자료형 Encoder
+
+- ByteArrayEncoder : byte array 를 DataBuffer 로 encode 하는 Encoder 입니다.
+- ByteBufferEncoder : `java.nio.ByteBuffer` 를 DataBuffer 로 encode 하는 Encoder 입니다.
+- DataBufferEncoder : DataBuffer 를 DataBuffer 로 encode 하는 Encoder 입니다.
+- NettyByteBufEncoder : `io.netty.buffer.ByteBuf` 를 DataBuffer 로 encode 하는 Encoder 입니다.
+- CharSequenceEncoder : CharSequence 를 DataBuffer 로 encode 하는 Encoder 입니다.
+
+<br/>
+
+
+
+### 객체 Serializaion 관련 Encoder
+
+- Jackson2JsonEncoder : jackson 라이브러리를 사용해서 객체를 json 형태의 DataBuffer 로 encode 하는 encoder 입니다. jackson 라이브러리가 있을 때에만 등록됩니다.
+- KotlinSerializationJsonEncoder : `kotlinx.serialization` 라이브러리를 활용해서 객체를 json 형태의 DataBuffer 로 encode 하는 encoder 입니다. `kotlinx.serialization` 라이브러리가 있을 경우에만 등록됩니다.
+- Jackson2SmailEncoder : `jackson` 라이브러리로 객체를 smile 형태의 DataBuffer 로 encode 하는 encoder 입니다. `jackson-smile` 라이브러리가 있을 때에만 등록됩니다.
+- Jaxb2XmlEncoder : jaxb 를 사용해서 객체를 xml 형태의 DataBuffer 로 encode 하는 encoder 입니다. jaxb 라이브러리가 있을 때에만 등록됩니다.
+
+<br/>
+
+
+
+### 기본 웹 응답 Writer
+
+- [ResourceHttpMessageWriter](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/codec/ResourceHttpMessageWriter.html) : HTTP 응답으로 리소스를 쓰는 역할을 수행합니다. canWrite(), writeResource(), write(), getWritableMediaTypes(), addHeaders(), addDefaultHeaders() 등과 같은 메서드를 제공합니다.
+- [ProtobufHttpMessageWriter](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/codec/protobuf/ProtobufHttpMessageWriter.html) : Protocol Buffers 형식으로 직렬화된 데이터를 HTTP 응답으로 전송하는 역할을 합니다. Protocol Buffers는 구조화된 데이터를 효율적으로 직렬화하고 파싱하기 위한 바이너리 형식입니다.
+
+<br/>
+
+
+
+### 객체 응답 Writer
+
+- ServerSentEventHttpMessageWriter : Server-Sent Events (SSE) 프로토콜을 통해 객체를 ServerSentEvent 로 encode 해서 write 하는 역할을 수행
+
+
+
+
+
+## HTTP 요청,응답 구조
+
+### Form 
+
+### Multipart
+
+
+
+## WebHandler 예제
+
+### Form 데이터
+
+### Multipart 데이터
 
 
 
