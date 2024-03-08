@@ -81,6 +81,10 @@ Spring Webflux 에서 자주 쓰이는 대표적인 Decoder, Reader 들을 정�
 
 Spring Webflux 에서 자주 쓰이는 대표적인 Encoder, Writer 들을 정리해봅니다.
 
+<br/>
+
+
+
 ### 기본자료형 Encoder
 
 - ByteArrayEncoder : byte array 를 DataBuffer 로 encode 하는 Encoder 입니다.
@@ -123,17 +127,107 @@ Spring Webflux 에서 자주 쓰이는 대표적인 Encoder, Writer 들을 정�
 
 ## HTTP 요청,응답 구조
 
-### Form 
+### Form
+
+#### webhandler 코드
+
+Form Data 응답 형식 테스트를 위해 WebHandler 코드를 작성했습니다. Content-Type 이 `x-www-form-urlencoded` 일 경우 exchange 객체 내의 getFormData() 메서드를 통해서 Form Data 를 MultiValueMap 형식으로 추출가능합니다.<br/>
+
+
+
+**FormDataWebHandlerExample1.java**<br/>
+
+```java 
+package io.chagchagchag.example.foobar.spring_webflux.codec;
+
+// ..
+
+@Slf4j
+public class FormDataWebHandlerExample1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    log.info("main function started");
+
+    var webHandler = new WebHandler(){
+      @Override
+      public Mono<Void> handle(ServerWebExchange exchange) {
+        var request = exchange.getRequest();
+        var response = exchange.getResponse();
+
+        // 여기
+        return exchange.getFormData()
+            .flatMap(multiValueMap -> {
+              String tickerQuery = multiValueMap.getFirst("ticker");
+              String ticker = tickerQuery == null ? "NVDA" : tickerQuery;
+
+              String content = "You picked " + ticker;
+              log.info("content = {}", content);
+
+              Mono<DataBuffer> responseBody = Mono.just(
+                  response.bufferFactory()
+                      .wrap(content.getBytes())
+              );
+
+              response.addCookie(ResponseCookie.from("ticker", ticker).build());
+              response.getHeaders().add("Content-Type", "text/plain");
+              return response.writeWith(responseBody);
+            });
+      }
+    };
+
+    var httpHandler = WebHttpHandlerBuilder
+        .webHandler(webHandler)
+        .build();
+
+    var handlerAdapter = new ReactorHttpHandlerAdapter(httpHandler);
+
+    HttpServer.create()
+            .host("localhost").port(8080)
+            .handle(handlerAdapter)
+            .bindNow()
+            .channel().closeFuture().sync();
+
+    log.info("main function end");
+  }
+}
+
+```
+
+<br/>
+
+
+
+#### http 요청 (intellij http)
+
+```http
+POST http://localhost:8080/
+Content-Type: application/x-www-form-urlencoded
+
+ticker=AMZN
+```
+
+<br/>
+
+
+
+#### 응답
+
+```plain
+HTTP/1.1 200 OK
+Content-Type: text/plain
+set-cookie: ticker=AMZN
+content-length: 15
+
+You picked AMZN
+```
+
+<br/>
+
+
 
 ### Multipart
 
 
-
-## WebHandler 예제
-
-### Form 데이터
-
-### Multipart 데이터
 
 
 
