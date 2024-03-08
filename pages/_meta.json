@@ -7,6 +7,7 @@
   "server-sent-event": "Server Sent Event (SSE)",
   "webflux-websocket": "Webflux Websocket",
   "r2dbc-mysql": "Spring Data R2dbc",
+  "spring-cloud-stream": "Spring Cloud Stream",
   "contact": {
     "title": "Contact ↗",
     "type": "page",

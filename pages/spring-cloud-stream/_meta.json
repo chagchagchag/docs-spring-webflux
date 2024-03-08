@@ -1,0 +1,6 @@
+{
+    "kafka-basic": "Kafka 의 주요 개념들",
+    "kafka-docker-compose": "Kafak 로컬 개발환경 (docker-compose)",
+    "spring-cloud-stream": "Spring Cloud Stream",
+    "spring-cloud-stream-kafka-binder": "Spring Cloud Stream Kafka Binder"
+}
