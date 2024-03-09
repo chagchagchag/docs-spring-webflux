@@ -61,11 +61,13 @@ dependencyManagement {
 
 ## `spring.cloud.function` 등록
 
+`application-stream-function.yaml`
+
 ```yaml
 spring:
   cloud:
     function:
-      definition: consumeMessage;supplyReady;functionIntConverter
+      definition: increment;livenessCheck;stringToBigDecimal
 ```
 
 <br/>
@@ -225,6 +227,134 @@ public class OutputDestination extends AbstractDestination {
 
 
 ## Consumer 구현, 테스트
+
+`ConcurrentHashMap<String, Integer>` 타입의 counterMap 을 Bean 으로 등록하고 이것을 기반으로 여러가지 키가 몇번 조회되었는지 카운트하는 간단한 예제를 살펴보겠습니다. <br/>
+
+**StreamFunctionsConfig.java**
+
+```java
+package io.chagchagchag.example.foobar.spring_cloud_stream.config;
+// ...
+
+@Slf4j
+@Configuration
+public class StreamFunctionsConfig {
+  @Bean
+  public ConcurrentHashMap<String, Integer> counterMap(){
+    return new ConcurrentHashMap<>();
+  }
+
+  @Bean
+  public Consumer<Flux<String>> increment(ConcurrentHashMap<String, Integer> counterMap){
+    return fluxKey -> {
+      fluxKey.subscribe(key -> {
+        counterMap.computeIfPresent(key, (k, v) ->v+1);
+        counterMap.computeIfAbsent(key, v -> 1);
+      });
+    };
+  }
+  
+  // ...
+
+}
+
+```
+
+<br/>
+
+
+
+그리고 위의 설정을 통해서 카운팅이 잘 이뤄지는지 테스트하는 코드는 아래와 같습니다.<br/>
+
+**IncrementTest.java**
+
+```java
+package io.chagchagchag.example.foobar.spring_cloud_stream.config;
+
+// ...
+
+@Import(TestChannelBinderConfiguration.class)
+@ActiveProfiles("stream-function")
+@SpringBootTest(classes = SpringCloudStreamApplication.class)
+public class IncrementTest {
+
+  StreamFunctionsConfig streamFunctionsConfig = new StreamFunctionsConfig();
+
+  ConcurrentHashMap<String, Integer> counterMap = new ConcurrentHashMap<>();
+
+  @DisplayName("INCREMENT_TEST")
+  @Test
+  public void TEST_INCREMENT_TEST(){
+    // given
+    var tickersFlux = Flux.just("NVDA","SMCI","MSFT", "NVDA");
+
+    // when
+    streamFunctionsConfig
+        .increment(counterMap)
+        .accept(tickersFlux);
+
+    // then
+    Assertions.assertEquals(counterMap.get("NVDA"), 2);
+    Assertions.assertEquals(counterMap.get("SMCI"), 1);
+    Assertions.assertEquals(counterMap.get("MSFT"), 1);
+  }
+
+}
+```
+
+<br/>
+
+
+
+이번에는 블랙박스 테스트입니다. Spring Cloud Function 의 내용이 무엇인지 전혀 모르는 상태로 메시지를 InputDestination 을 이용해서 Message를 보낼 경우 정상적으로 상태가 반영되었는지를 체크합니다.<br/>
+
+Spring Cloud Function 으로 등록한 `increment` Bean 의 Consumer 의 입력값 인자값에 해당하는 `increment-in-0` 을 inputBinding 으로 지정해줬기에 해당 Consumer 를 잘 찾아서 원하는 상태값으로 변경시켜준 것을 확인 가능합니다.<br/>
+
+**SpringCloudFunctionTest.java**
+
+```java
+package io.chagchagchag.example.foobar.spring_cloud_stream;
+
+// ...
+
+@Import(TestChannelBinderConfiguration.class)
+@ActiveProfiles("stream-function")
+@SpringBootTest(classes = SpringCloudStreamApplication.class)
+public class SpringCloudFunctionTest {
+
+  @Autowired
+  InputDestination inputDestination;
+
+  @Autowired
+  OutputDestination outputDestination;
+
+  @Autowired
+  ConcurrentHashMap counterMap;
+
+  @BeforeEach
+  public void reset(){
+    counterMap.clear();
+  }
+
+  @DisplayName("COUNTER_STREAM_MESSAGING")
+  @Test
+  public void TEST_COUNTER_STREAM_MESSAGING(){
+    // given
+    var ticker = "MSFT";
+    var input = new GenericMessage<>(ticker);
+    var inputBinding = "increment-in-0";
+
+    // when
+    inputDestination.send(input, inputBinding);
+
+    // then
+    assertThat(counterMap.getOrDefault(ticker, 0)).isEqualTo(1);
+  }
+  
+  // ...
+
+}
+```
 
 <br/>
 
