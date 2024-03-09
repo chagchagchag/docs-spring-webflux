@@ -1,2 +1,250 @@
 ## Spring Cloud Stream
 
+## 참고
+
+- [Spring Cloud Stream Reference Guide](https://docs.spring.io/spring-cloud-stream/docs/current-snapshot/reference/htmlsingle/)
+
+- [docs.spring.io - spring cloud stream / Spring Cloud Function Support](https://docs.spring.io/spring-cloud-stream/docs/current/reference/html/spring-cloud-stream.html#spring_cloud_function)
+
+- [spring-cloud-stream/Spring Cloud Stream Reference Documentation/Testing](https://docs.spring.io/spring-cloud-stream/reference/spring-cloud-stream/spring_integration_test_binder.html)
+
+- [Streaming with Spring Cloud](https://medium.com/walmartglobaltech/streaming-with-spring-cloud-24a001ad307a)
+- [Introduction to Spring Cloud Stream](https://www.baeldung.com/spring-cloud-stream)
+- [Guide to Spring Cloud Stream with Kafka, Apache Avro and Confluent Schema Registry](https://www.baeldung.com/spring-cloud-stream-kafka-avro-confluent)
+
+<br/>
+
+
+
+## Spring Cloud Stream 이란?
+
+![](./img/spring-cloud-stream/spring-cloud-stream.png)
+
+
+
+Spring Cloud Stream 은 추상화된 binder 를 제공합니다. 그리고 애플리케이션은 binder 를 통해서 input, output 을 주고 받습니다. kafka 를 사용할 경우 kafka 로부터의 메시지를 Consume 할 때에는 kafka-binder 를 이용해서 input을 통해서 접근 가능하고, 메시지를 Produce 할 경우에는 kafka-binder 의 output 기능을 통해서 데이터를 접근 가능합니다.<br/>
+
+<br/>
+
+
+
+## 의존성
+
+```kotlin
+// ...
+
+repositories {
+  mavenCentral()
+}
+
+extra["springCloudVersion"] = "2023.0.0"
+
+dependencies {
+  implementation("org.springframework.cloud:spring-cloud-stream")
+  testImplementation("org.springframework.boot:spring-boot-starter-test")
+  testImplementation("org.springframework.cloud:spring-cloud-stream-test-binder")
+}
+
+dependencyManagement {
+  imports {
+    mavenBom("org.springframework.cloud:spring-cloud-dependencies:${property("springCloudVersion")}")
+  }
+}
+
+// ...
+
+```
+
+<br/>
+
+
+
+## `spring.cloud.function` 등록
+
+```yaml
+spring:
+  cloud:
+    function:
+      definition: consumeMessage;supplyReady;functionIntConverter
+```
+
+<br/>
+
+
+
+## input, output bind 컨벤션
+
+위에서 살펴본 `spring.cloud.function` 에 등록된 함수에 입력인자명, 출력값은 아래의 컨벤션에 따라 binding 이 생성됩니다.
+
+입력(input) 인자값
+
+- `{cloud function bean 이름}-in-{argument index}`
+- e.g. `consumeMessage-in-0` 
+  - `spring.cloud.function` 에 등록한 `consumeMessage` 함수의 0번째 입력인자 를 의미합니다.
+
+<br/>
+
+
+
+출력(output) 컨벤션
+
+- `{cloud function bean 이름}-out-{return index}`
+- e.g. `supplyReady-out-0` 
+  - `spring.cloud.function` 에 등록한 `supplyReady` 함수의 0번째 출력(return)값을 의미합니다.
+
+<br/>
+
+
+
+예를 들면 위와 같은 binding 컨벤션으로 생성한 입력, 출력 명세에 따라 아래와 같은 방식으로 데이터를 주고 받을 수 있습니다.
+
+```java
+@Test
+public void TEST_FUNCTION_INT_CONVERTER(){
+    var stringNumber = "1000";
+    var input = new GenericMessage<>(stringNumber);
+    //...
+}
+```
+
+<br/>
+
+
+
+## InputDestination, OutputDestination
+
+### InputDestination
+
+InputDestination 클래스는 아래와 같이 정의되어 있습니다.
+
+```java
+package org.springframework.cloud.stream.binder.test;
+
+import org.springframework.messaging.Message;
+
+public class InputDestination extends AbstractDestination {
+  public InputDestination() {
+  }
+
+  public void send(Message<?> message) {
+    this.getChannel(0).send(message);
+  }
+
+  public void send(Message<?> message, String destinationName) {
+    this.getChannelByName(destinationName).send(message);
+  }
+}
+```
+
+<br/>
+
+
+
+InputDestination 에서 사용되는 [Message](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/messaging/Message.html) 는 interface 이고, InputDestination 에 주로 바인딩하는 구현체는 [GenericMessage](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/messaging/support/GenericMessage.html) 인데, GenericMessage 의 정의는 아래와 같습니다.
+
+```java
+package org.springframework.messaging.support;
+
+// ...
+public class GenericMessage<T> implements Message<T>, Serializable {
+  private static final long serialVersionUID = 4268801052358035098L;
+  private final T payload;
+  private final MessageHeaders headers;
+
+  public GenericMessage(T payload) {
+    this(payload, new MessageHeaders((Map)null));
+  }
+
+  public GenericMessage(T payload, Map<String, Object> headers) {
+    this(payload, new MessageHeaders(headers));
+  }
+
+  public GenericMessage(T payload, MessageHeaders headers) {
+    Assert.notNull(payload, "Payload must not be null");
+    Assert.notNull(headers, "MessageHeaders must not be null");
+    this.payload = payload;
+    this.headers = headers;
+  }
+    
+  // ...
+}
+```
+
+<br/>
+
+
+
+### OutputDestination
+
+```java
+package org.springframework.cloud.stream.binder.test;
+
+// ...
+
+public class OutputDestination extends AbstractDestination {
+  private final Log log = LogFactory.getLog(OutputDestination.class);
+  private final ConcurrentHashMap<String, BlockingQueue<Message<byte[]>>> messageQueues = new ConcurrentHashMap();
+
+  public OutputDestination() {
+  }
+
+  public Message<byte[]> receive(long timeout, String bindingName) {
+    try {
+      bindingName = bindingName.endsWith(".destination") ? bindingName : bindingName + ".destination";
+      return (Message)this.outputQueue(bindingName).poll(timeout, TimeUnit.MILLISECONDS);
+    } catch (InterruptedException var5) {
+      Thread.currentThread().interrupt();
+      return null;
+    }
+  }
+    
+  // ...
+
+  public Message<byte[]> receive() {
+    return this.receive(0L, 0);
+  }
+
+  public Message<byte[]> receive(long timeout) {
+    return this.receive(timeout, 0);
+  }
+
+  // ...
+}
+```
+
+
+
+
+
+
+
+## Consumer, Supplier, Function
+
+<br/>
+
+
+
+## Consumer 구현, 테스트
+
+<br/>
+
+
+
+## Supplier 구현, 테스트
+
+<br/>
+
+
+
+## Function 구현, 테스트
+
+<br/>
+
+
+
+## StreamBridge
+
+어떤 로직에서 특정 Spring Cloud Function 을 호출해야 하는 경우 StreamBridge 를 사용
+
+
+
