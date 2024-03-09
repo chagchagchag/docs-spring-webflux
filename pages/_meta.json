@@ -8,7 +8,7 @@
   "webflux-websocket": "Webflux Websocket",
   "r2dbc-mysql": "Spring Data R2dbc",
   "reactive-mongodb": "Spring Data Reactive Mongodb",
-  "spring-cloud-stream": "Spring Cloud Stream",
+  "spring-cloud-stream-and-kafka": "Spring Cloud Stream & Kafka",
   "contact": {
     "title": "Contact ↗",
     "type": "page",
