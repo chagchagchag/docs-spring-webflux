@@ -156,6 +156,8 @@ Spring Cloud Function 으로 등록한 `increment` Bean 의 Consumer 의 입력�
 
 ## InputDestination, OutputDestination
 
+참고로 InputDestination, OutputDestination 클래스들은 `test` 패키지 아래에 있는 클래스 들이기에 Application 레벨에서 호출하는 것이 불가능합니다. 보통 통합 테스트를 위해 InputDestination, OutputDestination 기반 코드를 작성하는 편입니다.<br/>
+
 ### InputDestination
 
 InputDestination 클래스는 아래와 같이 정의되어 있습니다.
@@ -349,6 +351,8 @@ public class IncrementTest {
 
 ### 통합테스트) SpringCloudFunctionTest.java
 
+> 참고로 InputDestination, OutputDestination 클래스들은 `test` 패키지 아래에 있는 클래스 들이기에 Application 레벨에서 호출하는 것이 불가능합니다. 보통 통합 테스트를 위해 InputDestination, OutputDestination 기반 코드를 작성하는 편입니다.<br/>
+
 이번에는 블랙박스 테스트입니다. Spring Cloud Function 의 내용이 무엇인지 전혀 모르는 상태로 메시지를 InputDestination 을 이용해서 Message를 보낼 경우 정상적으로 상태가 반영되었는지를 체크합니다.<br/>
 
 Spring Cloud Function 으로 등록한 `increment` Bean 의 Consumer 의 입력값 인자값에 해당하는 `increment-in-0` 을 inputBinding 으로 지정해줬기에 해당 Consumer 를 잘 찾아서 원하는 상태값으로 변경시켜준 것을 확인 가능합니다.<br/>
@@ -464,6 +468,8 @@ public class LivenessCheckTest {
 
 
 ### 통합테스트) SpringCloudFunctionTest.java
+
+> 참고로 InputDestination, OutputDestination 클래스들은 `test` 패키지 아래에 있는 클래스 들이기에 Application 레벨에서 호출하는 것이 불가능합니다. 보통 통합 테스트를 위해 InputDestination, OutputDestination 기반 코드를 작성하는 편입니다.<br/>
 
 ```java
 package io.chagchagchag.example.foobar.spring_cloud_stream;
@@ -592,6 +598,8 @@ public class StringToBigDecimalTest {
 
 ### 통합테스트) SpringCloudFunctionTest.java
 
+> 참고로 InputDestination, OutputDestination 클래스들은 `test` 패키지 아래에 있는 클래스 들이기에 Application 레벨에서 호출하는 것이 불가능합니다. 보통 통합 테스트를 위해 InputDestination, OutputDestination 기반 코드를 작성하는 편입니다.<br/>
+
 ```java
 package io.chagchagchag.example.foobar.spring_cloud_stream;
 // ...
@@ -643,7 +651,184 @@ public class SpringCloudFunctionTest {
 
 ## StreamBridge
 
-어떤 로직에서 특정 Spring Cloud Function 을 호출해야 하는 경우 StreamBridge 를 사용
+지금까지 위에서 살펴봤던 InputDestination, OutputDestination 은 모두 `org.springframework.cloud.stream.binder.test` 패키지 아래에 있는 클래스였습니다. InputDestination, OutputDestination 클래스들은 `test` 패키지 아래에 있는 클래스 들이기에 Application 레벨에서 호출하는 것이 불가능합니다.<br/>
+
+만약 Spring Cloud Function 을 애플리케이션 레벨에서 호출해서 사용해야 할 경우에는 `StreamBridge` 를 사용합니다.<br/>
+
+이번 예제는 새로 Spring Cloud Function 을 작성하고 REST API 에 요청이 왔을 때 실제로 Spring Cloud Function 이 호출되고 recevie 하는 측에서는 올바른 결과를 받는지를 체크하는 기능을 테스트해봅니다. 결과를 리턴받아야하므로 `Function<T,R>` 타입의 Spring Cloud Function 을 작성합니다.<br/>
+
+### application-stream-function.yaml
+
+이 파일은 `src/test/resources`, `srs/main/resources` 에 모두 추가해줍니다. 조금 전의 예제와 달라진 점은 `;toLengthList` 가 추가되었다는 점 입니다.
+
+```yaml
+spring:
+  cloud:
+    function:
+      definition: increment;livenessCheck;stringToBigDecimal;toLengthList
+```
+
+<br/>
+
+
+
+### StreamFunctionsConfig.java
+
+`StreamFunctionsConfig` 에는 아래와 같이 `Function<T,R>` 타입의 Bean 을 추가해주었습니다. 꼭 Bean 이 아니어도 @Component 로 추가해주어도 됩니다.
+
+```java
+package io.chagchagchag.example.foobar.spring_cloud_stream.config;
+
+// ...
+
+@Slf4j
+@Configuration
+public class StreamFunctionsConfig {
+  // ...
+  @Bean
+  public Function<Flux<String>, Flux<Integer>> toLengthList(){
+    return strFlux -> strFlux.map(String::length);
+  }
+}
+```
+
+<br/>
+
+
+
+### NumbersController.java
+
+NumbersController 는 아래와 같이 추가해줬습니다. 특정 문자열을 받으면 이 문자열에 대해 `streamBridge` 를 이용해서 toLengthList 함수를 호출하는 기능입니다. input Binding 과 입력값을 연결해준 모습이 보입니다. 
+
+```java
+package io.chagchagchag.example.foobar.spring_cloud_stream;
+
+// ...
+
+@RequiredArgsConstructor
+@RequestMapping("/numbers")
+@RestController
+public class NumbersController {
+  private final StreamBridge streamBridge;
+
+  @GetMapping("/to-list")
+  public void toList(@RequestParam("word") String word){
+    streamBridge.send("toLengthList-in-0", word);
+  }
+}
+```
+
+<br/>
+
+
+
+### 단위테스트) ToLengthListTest.java
+
+실제로 기능의 내부는 정상적으로 동작하는지 단위테스트를 작성했습니다.
+
+```java
+package io.chagchagchag.example.foobar.spring_cloud_stream.config;
+
+import io.chagchagchag.example.foobar.spring_cloud_stream.SpringCloudStreamApplication;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
+import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
+
+@Import(TestChannelBinderConfiguration.class)
+@ActiveProfiles("stream-function")
+@SpringBootTest(classes = SpringCloudStreamApplication.class)
+public class ToLengthListTest {
+  StreamFunctionsConfig streamFunctionsConfig = new StreamFunctionsConfig();
+
+  @DisplayName("TO_LENGTH_LIST")
+  @Test
+  public void TEST_TO_LENGTH_LIST(){
+    // given
+    var strWords = Flux.just("hello", "world", "java");
+
+    // when
+    var resultFlux = streamFunctionsConfig.toLengthList().apply(strWords);
+
+    // then
+    StepVerifier.create(resultFlux)
+        .expectNext("hello".length())
+        .expectNext("world".length())
+        .expectNext("java".length())
+        .verifyComplete();
+  }
+}
+```
+
+<br/>
+
+
+
+### 통합테스트) NumbersControllerTest.java
+
+이번에는 REST API 로 `locahost:8080/numbers/to-list?word=hello` 호출 시에 내부적으로 Stream Function 이 호출되어서 receive 시에 돌려받는 값이 실제로 `hello` 라는 단어의 길이를 리턴하는지를 확인하는 테스트 코드입니다.
+
+```java
+package io.chagchagchag.example.foobar.spring_cloud_stream;
+
+import java.util.concurrent.ConcurrentHashMap;
+import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cloud.stream.binder.test.InputDestination;
+import org.springframework.cloud.stream.binder.test.OutputDestination;
+import org.springframework.cloud.stream.binder.test.TestChannelBinderConfiguration;
+import org.springframework.context.annotation.Import;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.reactive.server.WebTestClient;
+
+@AutoConfigureWebTestClient
+@Import(TestChannelBinderConfiguration.class)
+@ActiveProfiles("stream-function")
+@SpringBootTest(classes = SpringCloudStreamApplication.class)
+public class NumbersControllerTest {
+  @Autowired
+  InputDestination inputDestination;
+
+  @Autowired
+  OutputDestination outputDestination;
+
+  @Autowired
+  ConcurrentHashMap counterMap;
+
+  @Autowired
+  WebTestClient webTestClient;
+
+  @DisplayName("TO_LIST_FUNCTION")
+  @Test
+  public void TEST_TO_LIST_FUNCTION(){
+    // given
+    var expected = "hello".length();
+    var outputBinding = "toLengthList-out-0";
+
+    // when
+    webTestClient.get()
+        .uri("/numbers/to-list?word="+"hello")
+        .exchange()
+        .expectStatus().isOk();
+
+    // then
+    var result = outputDestination.receive(30, outputBinding);
+    String resultMessage = new String(result.getPayload());
+    Assertions.assertThat(expected).isEqualTo(Integer.parseInt(resultMessage));
+  }
+
+}
+```
+
+
 
 
 
