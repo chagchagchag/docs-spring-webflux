@@ -101,13 +101,54 @@ spring:
 예를 들면 위와 같은 binding 컨벤션으로 생성한 입력, 출력 명세에 따라 아래와 같은 방식으로 데이터를 주고 받을 수 있습니다.
 
 ```java
-@Test
-public void TEST_FUNCTION_INT_CONVERTER(){
-    var stringNumber = "1000";
-    var input = new GenericMessage<>(stringNumber);
-    //...
+package io.chagchagchag.example.foobar.spring_cloud_stream;
+
+// ...
+
+@Import(TestChannelBinderConfiguration.class)
+@ActiveProfiles("stream-function")
+@SpringBootTest(classes = SpringCloudStreamApplication.class)
+public class SpringCloudFunctionTest {
+
+  @Autowired
+  InputDestination inputDestination;
+
+  @Autowired
+  OutputDestination outputDestination;
+
+  @Autowired
+  ConcurrentHashMap counterMap;
+
+  @BeforeEach
+  public void reset(){
+    counterMap.clear();
+  }
+
+  @DisplayName("COUNTER_STREAM_MESSAGING")
+  @Test
+  public void TEST_COUNTER_STREAM_MESSAGING(){
+    // given
+    var ticker = "MSFT";
+    var input = new GenericMessage<>(ticker);
+    var inputBinding = "increment-in-0";
+
+    // when
+    inputDestination.send(input, inputBinding);
+
+    // then
+    assertThat(counterMap.getOrDefault(ticker, 0)).isEqualTo(1);
+  }
+  
+  // ...
+
 }
 ```
+
+<br/>
+
+간단한 블랙박스 테스트입니다. Spring Cloud Function 의 내용이 무엇인지 전혀 모르는 상태로 메시지를 InputDestination 을 이용해서 Message를 보낼 경우 정상적으로 상태가 반영되었는지를 체크합니다.<br/>
+
+Spring Cloud Function 으로 등록한 `increment` Bean 의 Consumer 의 입력값 인자값에 해당하는 `increment-in-0` 을 inputBinding 으로 지정해줬기에 해당 Consumer 를 잘 찾아서 원하는 상태값으로 변경시켜준 것을 확인 가능합니다.<br/>
 
 <br/>
 
@@ -230,7 +271,7 @@ public class OutputDestination extends AbstractDestination {
 
 `ConcurrentHashMap<String, Integer>` 타입의 counterMap 을 Bean 으로 등록하고 이것을 기반으로 여러가지 키가 몇번 조회되었는지 카운트하는 간단한 예제를 살펴보겠습니다. <br/>
 
-**StreamFunctionsConfig.java**
+### 설정) StreamFunctionsConfig.java
 
 ```java
 package io.chagchagchag.example.foobar.spring_cloud_stream.config;
@@ -266,7 +307,7 @@ public class StreamFunctionsConfig {
 
 그리고 위의 설정을 통해서 카운팅이 잘 이뤄지는지 테스트하는 코드는 아래와 같습니다.<br/>
 
-**IncrementTest.java**
+### 단위테스트) IncrementTest.java
 
 ```java
 package io.chagchagchag.example.foobar.spring_cloud_stream.config;
@@ -306,11 +347,11 @@ public class IncrementTest {
 
 
 
+### 통합테스트) SpringCloudFunctionTest.java
+
 이번에는 블랙박스 테스트입니다. Spring Cloud Function 의 내용이 무엇인지 전혀 모르는 상태로 메시지를 InputDestination 을 이용해서 Message를 보낼 경우 정상적으로 상태가 반영되었는지를 체크합니다.<br/>
 
 Spring Cloud Function 으로 등록한 `increment` Bean 의 Consumer 의 입력값 인자값에 해당하는 `increment-in-0` 을 inputBinding 으로 지정해줬기에 해당 Consumer 를 잘 찾아서 원하는 상태값으로 변경시켜준 것을 확인 가능합니다.<br/>
-
-**SpringCloudFunctionTest.java**
 
 ```java
 package io.chagchagchag.example.foobar.spring_cloud_stream;
@@ -362,11 +403,239 @@ public class SpringCloudFunctionTest {
 
 ## Supplier 구현, 테스트
 
+### 설정) StreamFunctionsConfig.java
+
+```java
+package io.chagchagchag.example.foobar.spring_cloud_stream.config;
+
+// ...
+
+@Slf4j
+@Configuration
+public class StreamFunctionsConfig {
+  // ...
+  
+  @Bean
+  public Supplier<Flux<String>> livenessCheck(){
+    return () -> Flux.just("OK");
+  }
+    
+  // ...
+
+}
+```
+
+<br/>
+
+
+
+### 단위테스트) LivenessCheckTest.java
+
+```java
+package io.chagchagchag.example.foobar.spring_cloud_stream.config;
+
+// ...
+
+@Import(TestChannelBinderConfiguration.class)
+@ActiveProfiles("stream-function")
+@SpringBootTest(classes = SpringCloudStreamApplication.class)
+public class LivenessCheckTest {
+  StreamFunctionsConfig streamFunctionsConfig = new StreamFunctionsConfig();
+
+  @DisplayName("LIVENESS_CHECK")
+  @Test
+  public void TEST_LIVENESS_CHECK(){
+    // given
+
+    // when
+    var livenessCheckFlux = streamFunctionsConfig.livenessCheck().get();
+
+    // then
+    StepVerifier.create(livenessCheckFlux)
+        .expectNext("OK")
+        .verifyComplete();
+  }
+
+}
+```
+
+<br/>
+
+
+
+### 통합테스트) SpringCloudFunctionTest.java
+
+```java
+package io.chagchagchag.example.foobar.spring_cloud_stream;
+// ...
+
+@Import(TestChannelBinderConfiguration.class)
+@ActiveProfiles("stream-function")
+@SpringBootTest(classes = SpringCloudStreamApplication.class)
+public class SpringCloudFunctionTest {
+
+  @Autowired
+  InputDestination inputDestination;
+
+  @Autowired
+  OutputDestination outputDestination;
+
+  @Autowired
+  ConcurrentHashMap counterMap;
+
+  @BeforeEach
+  public void reset(){
+    counterMap.clear();
+  }
+  
+  // ...
+  
+  // Supplier (livenessCheck)
+  @DisplayName("LIVENESS_CHECK_STREAM_MESSAGING")
+  @Test
+  public void TEST_LIVENESS_CHECK_STREAM_MESSAGING(){
+    // given
+    var outputBinding = "livenessCheck-out-0";
+    var expectedMsg = List.of("OK");
+
+    for(var name: expectedMsg){
+      // when
+      var received = outputDestination.receive(300, outputBinding);
+      String outputMessage = new String(received.getPayload());
+
+      // then
+      assertThat(outputMessage.equals(name)).isTrue();
+    }
+  }
+  
+  // ...
+
+}
+```
+
 <br/>
 
 
 
 ## Function 구현, 테스트
+
+### 설정) StreamFunctionsConfig.java
+
+```java
+package io.chagchagchag.example.foobar.spring_cloud_stream.config;
+// ...
+
+@Slf4j
+@Configuration
+public class StreamFunctionsConfig {
+  // ...
+  @Bean
+  public Function<Flux<String>, Flux<BigDecimal>> stringToBigDecimal(){
+    return fluxString -> fluxString.handle((str, sink) -> {
+      try{
+        Number parse = NumberFormat.getNumberInstance(Locale.US).parse(str);
+        sink.next(new BigDecimal(parse.toString()));
+      }
+      catch (ParseException e){
+        e.printStackTrace();
+        sink.error(new IllegalStateException("Number Format is not supported."));
+      }
+    });
+  }
+
+}
+```
+
+<br/>
+
+
+
+### 단위테스트) StringToBigDecimalTest
+
+```java
+package io.chagchagchag.example.foobar.spring_cloud_stream.config;
+// ...
+
+@Import(TestChannelBinderConfiguration.class)
+@ActiveProfiles("stream-function")
+@SpringBootTest(classes = SpringCloudStreamApplication.class)
+public class StringToBigDecimalTest {
+  StreamFunctionsConfig streamFunctionsConfig = new StreamFunctionsConfig();
+
+  @DisplayName("STRING_TO_BIG_DECIMAL")
+  @Test
+  public void TEST_STRING_TO_BIG_DECIMAL(){
+    // given
+    var strNumbers = Flux.just("28.39");
+    var expected = BigDecimal.valueOf(28.39);
+
+    Predicate<BigDecimal> equals = d -> {
+      if(d.equals(expected)) return true;
+      else return false;
+    };
+
+    // when
+    var bigDeciamlFlux = streamFunctionsConfig.stringToBigDecimal().apply(strNumbers);
+
+    // then
+    StepVerifier.create(bigDeciamlFlux)
+        .expectNextMatches(equals)
+        .verifyComplete();
+  }
+
+}
+```
+
+<br/>
+
+
+
+### 통합테스트) SpringCloudFunctionTest.java
+
+```java
+package io.chagchagchag.example.foobar.spring_cloud_stream;
+// ...
+
+@Import(TestChannelBinderConfiguration.class)
+@ActiveProfiles("stream-function")
+@SpringBootTest(classes = SpringCloudStreamApplication.class)
+public class SpringCloudFunctionTest {
+
+  @Autowired
+  InputDestination inputDestination;
+
+  @Autowired
+  OutputDestination outputDestination;
+
+  @Autowired
+  ConcurrentHashMap counterMap;
+
+  // ...
+  
+  // Function (stringToBigDecimal)
+  @DisplayName("STRING_TO_BIG_DECIMAL")
+  @Test
+  public void TEST_STRING_TO_BIG_DECIMAL() throws ParseException {
+    // given
+    var inputBinding = "stringToBigDecimal-in-0";
+    var outputBinding = "stringToBigDecimal-out-0";
+    var input = new GenericMessage<>("28.39");
+    var expected = BigDecimal.valueOf(28.39);
+
+    // when
+    // 먼저 값을 보낸다.
+    inputDestination.send(input, inputBinding);
+
+    // then
+    // 치리되어 반환하는 값을 받는다.
+    var received = outputDestination.receive(30, outputBinding);
+    var receivedStr = new String(received.getPayload());
+    var receivedDecimal = new BigDecimal(receivedStr);
+    assertThat(receivedDecimal).isEqualTo(expected);
+  }
+
+}
+```
 
 <br/>
 
