@@ -1,7 +1,7 @@
 {
   "index": "Introduction",
   "concurrent-programming-basic": "동시성 프로그래밍 개념들",
-  "nio-and-netty": "NIO, Netty",
+  "nio-and-aio": "NIO, AIO",
   "reactive-programming": "Reactive Programming",
   "spring-webflux": "Spring Webflux",
   "server-sent-event": "Server Sent Event (SSE)",
