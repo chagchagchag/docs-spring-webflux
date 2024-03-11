@@ -4,11 +4,11 @@
   "nio-and-aio": "NIO, AIO",
   "reactive-programming": "Reactive Programming",
   "spring-webflux": "Spring Webflux",
+  "spring-cloud-stream-and-kafka": "Spring Cloud Stream & Kafka",
   "server-sent-event": "Server Sent Event (SSE)",
   "webflux-websocket": "Webflux Websocket",
   "r2dbc-mysql": "Spring Data R2dbc",
   "reactive-mongodb": "Spring Data Reactive Mongodb",
-  "spring-cloud-stream-and-kafka": "Spring Cloud Stream & Kafka",
   "contact": {
     "title": "Contact ↗",
     "type": "page",
