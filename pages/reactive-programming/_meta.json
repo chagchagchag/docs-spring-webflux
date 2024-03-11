@@ -4,7 +4,7 @@
     "netflix-rxjava-story": "Netflix RxJava 이야기",
     "reactive-streams": "Reactive Streams - Publisher, Subscriber 개념, 예제",
     "reactive-streams-libraries": "Reactive Streams 라이브러리들",
-    "java-nio-bad-point": "Java NIO 의 논블로킹 방식 동기연산의 문제점",
+    "java-nio-bad-point-and-solution": "Java NIO 의 논블로킹 방식 동기연산의 문제점과 해결책, 멀티플렉싱",
     "what-is-epoll": "epoll 이란?",
     "reactor-pattern": "reactor 패턴",
     "proactor-pattern": "proactor 패턴"
