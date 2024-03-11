@@ -152,7 +152,7 @@ Apache, Nginx 의 동시 접속자가 늘어날 때 RPS (Request Per Second) 의
 
 
 
-## 가능한 해결책 : select, poll, epoll, kqueue, iocp
+## 가능한 해결책 : select, poll, epoll, kqueue, iocp 를 이용한 다중화(멀티플렉싱)
 
 [C10K Problem](http://www.kegel.com/c10k.html) 에서는 아래와 같이 select(), poll(), kqueue 등의 방법을 제안하고 있습니다. 1990 년도의 linux 에서는 epoll 이 없었기에 BSD OS기반의 서버에서 kqueue 를 사용하거나 select, poll 을 사용하는 것이 주요 방법이었습니다.
 
