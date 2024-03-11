@@ -4,5 +4,5 @@
     "what-is-nio": "NIO 의 개념, 특징, 주요 클래스",
     "java-nio-socket-communication": "Java NIO 소켓통신",
     "what-is-aio": "AIO 의 개념, 특징, 예제",
-    "tomcat-vs-netty": "Tomcat vs Netty"
+    "servlet-stack-vs-reactive-stack": "Servlet Stack vs Reactive Stack"
 }
