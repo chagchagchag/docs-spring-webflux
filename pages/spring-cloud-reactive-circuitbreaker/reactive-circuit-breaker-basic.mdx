@@ -85,22 +85,47 @@ Spring Cloud Circuit Breaker 는 추상화된 라이브러리이고, 구현되�
 
 
 ## Circuit Breaker 의 3가지 상태
-![](./img/reactive-circuit-breaker-basic/3STATE.png)
+
+Circuit Breaker 는 Closed, Half Open, Open 상태를 그림을 보고 이해해야 합니다. <br/>
+
+> 참고 
+>
+> - [Service resiliency with Spring Boot and Resilience4j](https://symphony.is/about-us/blog/service-resiliency-with-spring-boot-and-resilience4j)
+> - [Circuitbreaker를 사용한 장애 전파 방지](https://oliveyoung.tech/blog/2023-08-31/circuitbreaker-inventory-squad/)
+
 <br/>
 
 
 
-**Closed** 
+### Closed
 
-- 정상적으로 요청을 받을 수 있는 상태입니다. 처음 본다면  `Closed` 라는 단어를 보고 차단되었다고 착각하기 쉽지만, `Closed` 는 회로 차단기로 **회로를 차단(Close)**했다. 라고 이해하면 수월합니다.
+![](./img/reactive-circuit-breaker-basic/CLOSED-STATUS.png)
 
-**Half Open**
+- 정상적으로 요청을 받을 수 있는 상태입니다. 
+- 처음 보거나 오랜만에 봤다면  `Closed` 라는 단어를 보고 차단되었다고 착각하기 쉽습니다. 주의해야 합니다.
+- `Closed` 는 회로차단기의 스위치를 닫아(Closed)서 스위치가 붙어있는 상태를 기억하면 이해가 쉽습니다.
 
-- 트래픽을 어느 정도 흘려본 후 Open 을 유지할 지 Closed 로 변경할지 결정하는 상태입니다.
+<br/>
 
-**Open**
 
-- Circuit Breaker 가 중지된 상태입니다. 차단기의 **스위치를 열어두었다.(Open)** 로 이해하면 수월합니다.
+
+### Half Open
+
+![](./img/reactive-circuit-breaker-basic/HALF-OPEN-STATUS.png)
+
+- 트래픽을 어느 정도 흘려본 후 Open 을 유지할지 Closed 로 변경할지 결정하는 상태입니다.
+
+<br/>
+
+
+
+### Open
+
+![](./img/reactive-circuit-breaker-basic/OPEN-STATUS.png)
+
+- Circuit Breaker 가 회로를 끊어둔 상태입니다. 
+- 회로 차단기가 켜져있는 상태입니다.
+- 특정 목적지로 가는 트래픽을 차단하고 있는 상태입니다.
 
 <br/>
 
