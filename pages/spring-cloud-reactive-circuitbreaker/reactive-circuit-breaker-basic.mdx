@@ -1,0 +1,62 @@
+## Reactive Circuit Breaker 
+
+## Plain MSA
+Spring Cloud 와 API 통신 추상화 계층이 없는 MSA의 구조는 아래와 같습니다.
+![](./img/reactive-circuit-breaker-basic/PLAIN-MSA-COMMUNICATION.png)
+각각의 MSA는 메시지 큐와 통신할 때에는 메시지 큐의 구체적인 종류에 따라 구현이 계속 달라지게 되고, 메시지 큐의 종류를 바꾸는 것 역시 쉽지 않습니다.<br/>
+또한 API 간의 통신 시에 단절이 어떻게 되는지 판정할 방법과 Healthcheck 를 할 방법, Client 측의 Loadbalancing 등에 대한 대책이 분명하지 않습니다.<br/>
+
+## Spring Cloud Circuit Breaker 를 적용하면
+Spring Cloud Circuit Breaker 를 적용하면 아래와 같은 방식으로 통신이 이루어집니다.
+![](./img/reactive-circuit-breaker-basic/SPRING-CLOUD-MSA.png)
+<br/>
+
+MSA API 간의 통신을 수행 시에 Circuit Breaker 를 통해서 통신을 하게 되고, 실패율을 측정할 수 있고, 통신에 문제가 있다고 판단되면 차단이 가능하며, OPEN, HALF\_OPEN, CLOSE 등의 속성을 이용해서 HALF\_OPEN 상태로 둔후 정상화 되면 다시 OPEN 되도록 하는 것이 가능해집니다.<br/>
+또한 Spring Cloud Config 서버까지 적용을 하게 될 경우 설정을 property 화 해서 서버의 재기동/재배포 없이 Circuit Breaker 의 설정을 바꾸는 것으로 정상 운영이 가능해집니다.<br/>
+<br/>
+
+메시지 큐를 사용한 통신 시에는 Spring Cloud Stream 을 이용해서 통신을 하게 되는데 이때 실제 메시지 큐의 종류에 영향없이 Spring Cloud Stream 을 통해서 통신을 수행할 수 있습니다. 따라서 메시지 큐의 종류를 교체하더라도, 기존 로직을 새로운 메시지 큐를 사용하도록 전환하는 것이 비교적 수월해집니다.<br/>
+
+## Spring Cloud Release
+- [github.com - spring-cloud-release](https://github.com/spring-cloud/spring-cloud-release)
+- [Spring Cloud Release - Supported Release](https://github.com/spring-cloud/spring-cloud-release/wiki/Supported-Versions#supported-releases)
+- [spring.io/projects/spring-cloud#overivew](https://spring.io/projects/spring-cloud#overview)
+<br/>
+
+## Resilience4j Circuit Breaker
+Spring Cloud Circuit Breaker 는 추상화된 라이브러리이고, 구현되어 있는 구현체가 필요합니다. 이 중 Reactor 기반의 Circuit Breaker 를 지원하는 것은 현재 Resilience4j 의 Cricuit Breaiker 뿐 입니다.
+- [Resilience4j Circuit Breaker](https://resilience4j.readme.io/docs/circuitbreaker)
+- [github.com/resilience4j/resilience4j](https://github.com/resilience4j/resilience4j)
+<br/>
+
+## Circuit Breaker 의 3가지 상태
+![](./img/reactive-circuit-breaker-basic/3STATE.png)
+<br/>
+
+## 의존성
+의존성은 아래와 같습니다.
+```kotlin
+// ...
+
+repositories {
+  mavenCentral()
+}
+
+ext {
+  set('springCloudVersion', "2023.0.0")
+}
+
+dependencies {
+  implementation 'org.springframework.cloud:spring-cloud-starter-circuitbreaker-resilience4j'
+  testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+dependencyManagement {
+  imports {
+    mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+  }
+}
+```
+<br/>
+
+
