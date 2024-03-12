@@ -5,6 +5,8 @@
   "reactive-programming": "Reactive Programming",
   "spring-webflux": "Spring Webflux",
   "spring-cloud-stream-and-kafka": "Spring Cloud Stream & Kafka",
+  "spring-cloud-reactive-circuitbreaker": "Spring Cloud Reactive Circuit Breaker",
+  "kotlin-coroutine": "Kotlin Croutine",
   "server-sent-event": "Server Sent Event (SSE)",
   "webflux-websocket": "Webflux Websocket",
   "r2dbc-mysql": "Spring Data R2dbc",
