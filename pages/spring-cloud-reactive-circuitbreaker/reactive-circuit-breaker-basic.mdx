@@ -210,9 +210,17 @@ sliding window 로 측정을 할 때에는 sliding Window Size 에 도달할 때
 
 <br/>
 
+## Sliding Window 를 이용한 Failure Rate 측정
 
+failure rate 는 실패횟수를 Sliding Window 사이즈로 나눈 수치를 Failure Rate 라고 합니다.
 
+- failure rate = 실패한 호출 수 / Sliding Window size
 
+<br/>
+
+![](./img/reactive-circuit-breaker-basic/FAILURE-RATE.png)
+
+슬라이딩 윈도우 측정 시에 새로운 측정 값이 추가될 때 Sliding Window 전체의 실패 갯수를 측정하는 방식으로 측정하지 않습니다. O(n) 의 시간이 걸리기 때문입니다. 새로운 측정 값이 들어왔을 때 새로운 측정 결과는 더하고 이전 측정 결과는 뺀 후에 이것을 슬라이딩 윈도우 사이즈로 나누어서 새로운 `failure rate` 를 측정하게 됩니다.<br/>
 
 
 
