@@ -198,6 +198,22 @@ Half Open 으로 전환하는 방법은 코드로 실행시키는 방식, 일정
 
 <br/>
 
+## Sliding Window
+
+![](./img/reactive-circuit-breaker-basic/SLIDING-WINDOW.png)
+
+슬라이딩 윈도우는 위와 같은 방식으로 동작합니다. circular array 처럼 동작합니다.<br/>
+
+슬라이딩 윈도우는 실패, 성공 여부를 sliding window size 만큼 쌓아두고 실패율(failure rate)을 측정하기 위해 사용합니다. circuit breaker 를 이용해서 통신을 차단하거나 허용할 때는 이 실패율을 기준으로 판단합니다.<br/>
+
+sliding window 로 측정을 할 때에는 sliding Window Size 에 도달할 때 까지 계속해서 측정을 합니다. 그리고 측정한 개수가 n개에 도달했을 경우 가장 최초에 저장했던 결과를 제거한 후 새로운 결과를 저장합니다.<br/>
+
+<br/>
+
+
+
+
+
 
 
 
