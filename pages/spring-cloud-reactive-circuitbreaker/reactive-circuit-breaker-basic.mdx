@@ -1,5 +1,14 @@
 ## Reactive Circuit Breaker 
 
+## 참고자료
+
+- [Service resiliency with Spring Boot and Resilience4j](https://symphony.is/about-us/blog/service-resiliency-with-spring-boot-and-resilience4j)
+- [Circuitbreaker를 사용한 장애 전파 방지](https://oliveyoung.tech/blog/2023-08-31/circuitbreaker-inventory-squad/)
+
+<br/>
+
+
+
 ## Plain MSA
 Spring Cloud 와 API 통신 추상화 계층이 없는 MSA의 구조는 아래와 같습니다.
 ![](./img/reactive-circuit-breaker-basic/PLAIN-MSA-COMMUNICATION.png)
@@ -130,12 +139,65 @@ Circuit Breaker 는 Closed, Half Open, Open 상태를 그림을 보고 이해해
 <br/>
 
 
-
 Resilience4j 의 로고 역시 이와 같은 3종류의 상태를 잘 표현하고 있습니다. 검은색 원은 Closed, 반정도 차있는 원은 Half Open, 비어있는 원은 Open 상태를 의미합니다.
 
 ![](./img/reactive-circuit-breaker-basic/logo.png)
 
 <br/>
+
+
+
+## 상태 변이 (State Transition)
+
+![](./img/reactive-circuit-breaker-basic/state_machine.png)
+<br/>
+
+> 출처 : [resilience4j.readme.io/docs/circuitbreaker#introduction](https://resilience4j.readme.io/docs/circuitbreaker#introduction)
+
+<br/>
+
+
+
+### Closed → Open
+
+Closed 에서는 Open 으로만 상태 변화가 가능합니다.<br/>
+
+통신이 열려있는 상태에서는 차단 하는 것만 가능하다는 것으로 이해하면 기억하기 쉽습니다.<br/>
+
+<br/>
+
+
+
+### Half Open → Open, Half Open → Closed
+
+Half Open 상태에서는 Open, Closed 상태로만 변화가 가능합니다.<br/>
+
+<br/>
+
+
+
+### Open → Half Open
+
+회로가 차단되어 있는 Open 상태에서는 Half Open 상태로만 진입이 가능합니다.<br/>
+
+Half Open 으로 전환하는 방법은 코드로 실행시키는 방식, 일정시간 대기 후 Open 으로 전환되도록 하는 방식이 있습니다. 일반적으로 코드 레벨에서 하드코딩으로 Half Open 으로 전환되도록 하는 방식은 추천되는 방식은 아닙니다.<br/>
+
+가급적이면 일정 시간 이후에 Half Open 이 되도록 delay 시간을 주어야 합니다.
+
+- enableAutomaticTransitionFromOpenToHalfOpen()
+- waitDurationInOpenState()
+
+위의 두 함수를 통해서 이 설정을 활성화하는 것이 가능합니다. 아래의 yml 설정으로도 이 설정을 지정할 수 있습니다.
+
+- automatic-transition-from-open-to-half-open-enabled
+  - open 에서 halfopen 으로 자동으로 전환하게끔 enable 하는 메서드입니다. 
+  - 기본값은 false 이지만 위에서는 enable 시켜서 true 가 되었습니다.
+- wait-duration-in-open-state
+  - open 에서 half open 으로 전환할 때 까지 필요한 시간(Duration)입니다.
+  - 설정하지 않으면 기본값으로 설정되며 기본값은 60초 입니다.
+
+<br/>
+
 
 
 
@@ -424,15 +486,856 @@ resilience4j:
 
 ## 테스트 코드
 
-### closed
+### ReactiveHealthcheckService.java
+
+> 코드 : [ReactiveHealthcheckService.java](https://github.com/chagchagchag/webflux-mongo-mysql-redis/blob/main/demo-spring-cloud-reactive-circuit-breaker/src/main/java/io/chagchagchag/example/foobar/reactive_circuit_breaker/ReactiveHealthcheckService.java)
+
+이번 테스트 코드에서 사용할 기능은 ReactiveHealthcheckService 내의 ready() 함수 기능입니다.<br/>
+
+장애가 걸리는 상황을 가정해서 테스트하 위해 인자값으로 delayMs 를 사용했습니다.<br/>
+
+자세한 설명은 주석으로 추가해두었습니다.<br/>
+
+흔히 백엔드 애플리케이션에서 actuator 또는 probe 를 위해 "OK" 등과 같은 문자열을 내보내는 `ready()`, `readyWithId(...)`, `readyWithException(...)` 을 서킷브레이커로 감싼 클래스입니다.<br/>
+
+```java
+package io.chagchagchag.example.foobar.reactive_circuit_breaker;
+
+import io.chagchagchag.example.foobar.reactive_circuit_breaker.common.Ready;
+import java.time.Duration;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.client.circuitbreaker.ReactiveCircuitBreakerFactory;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+@RequiredArgsConstructor
+@Service
+public class ReactiveHealthcheckService {
+  private final ReactiveCircuitBreakerFactory healthCheckCircuitBreaker;
+  private final Ready ready;
+
+  private final String fallbackMessage = "FoobarHealthCircuitBreaker Fallback";
+
+  /**
+   * health 체크를 위한 "OK (ServiceName)" 문자열을 Mono 기반의 동시성 코드로 생성하는 공통 코드입니다.
+   * @param from SERVICE 명
+   * @param delayMs 지연할 시간
+   * @return
+   */
+  public Mono<String> delayedOk(String from, Long delayMs){
+    var duration = Duration.ofMillis(delayMs);
+    return Mono.delay(duration)
+        .then()
+        .then(Mono.fromCallable(() -> ready.ok(from)));
+  }
+
+  /**
+   * 다른 설정이 되지 않은 기본설정이 되어 있는 circuitBreaker 를 기반으로 ready() 함수에 대해 회로차단기를 걸어두었습니다.
+   * "OK" 신호를 내보내는 데에 delayMs 로 들어온 지연 시간이 걸리도록 합니다.
+   * 이때 CircuitBreaker 내의 허용된 지연시간, 실패 횟수, 슬라이딩윈도우, 실패율 등에 따라
+   * CircuitBreaker 가 이 기능을 차단할지, 차단하지 않을지를 결정하게 됩니다.
+   * @param from SERVICE 명
+   * @param delayMs 지연할 시간
+   * @return
+   */
+  public Mono<String> ready(String from, Long delayMs){
+    return delayedOk(from, delayMs)
+        .transform(it -> {
+          var cb = healthCheckCircuitBreaker.create("normal");
+          return cb.run(it, throwable -> Mono.just(fallbackMessage));
+        });
+  }
+
+  /**
+   * "OK"신호를 내보낼 때 exception 이 발생하는 경우를 가정합니다.
+   * @param from SERVICE 명
+   * @return
+   */
+  public Mono<String> readyWithException(String from){
+    Mono<String> mono = Mono.error(new RuntimeException("Err"));
+
+    return mono.transform(it -> {
+      var circuitBreaker = healthCheckCircuitBreaker.create("exception");
+      return circuitBreaker
+          .run(it, throwable -> Mono.just(fallbackMessage));
+    });
+  }
+
+  /**
+   * "OK" 신호를 내보내는 기능을 특정 ID를 가진 서킷브레이커로 감쌉니다.
+   * @param id
+   * @param from SERVICE 명
+   * @param delayMs 지연할 시간
+   * @return
+   */
+  public Mono<String> readyWithId(String id, String from, Long delayMs){
+    return delayedOk(from, delayMs)
+        .transform(it -> {
+          var cb = healthCheckCircuitBreaker.create(id);
+          return cb.run(it, throwable -> Mono.just(fallbackMessage));
+        });
+  }
+
+  public Mono<String> readyWithIdAndGroup(
+      String id, String group, String from, Long delayMs
+  ){
+    return delayedOk(from, delayMs)
+        .transform(it -> {
+          var cb = healthCheckCircuitBreaker.create(id, group);
+          return cb.run(it, throwable -> Mono.just(fallbackMessage));
+        });
+  }
+}
+
+```
+
+<br/>
+
+### TestCircuitBreakerConfig
+
+서킷 브레이커 설정들을 모아둔 클래스입니다. 예제를 위한 용도여서 자바 기반 코드로 작성했습니다. yaml 기반 코드로 작성하는 것이 더 효율적인 경우도 있습니다. 이번 문서에서는 자바 설정 코드로 예제 테스트를 진행합니다.
+
+```java
+package io.chagchagchag.example.foobar.reactive_circuit_breaker;
+
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.github.resilience4j.timelimiter.TimeLimiterConfig;
+import java.time.Duration;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.cloud.circuitbreaker.resilience4j.ReactiveResilience4JCircuitBreakerFactory;
+import org.springframework.cloud.circuitbreaker.resilience4j.Resilience4JConfigBuilder;
+import org.springframework.cloud.client.circuitbreaker.Customizer;
+import org.springframework.context.annotation.Bean;
+
+@Slf4j
+@TestConfiguration
+public class TestCircuitBreakerConfig {
+  @Bean
+  public Customizer<ReactiveResilience4JCircuitBreakerFactory> healthCheck(){
+    var circuitBreakerConfig = CircuitBreakerConfig.custom()
+        .slidingWindowSize(10)
+        .failureRateThreshold(75)
+        .enableAutomaticTransitionFromOpenToHalfOpen()
+        .waitDurationInOpenState(Duration.ofSeconds(5))
+        .permittedNumberOfCallsInHalfOpenState(6)
+        .ignoreExceptions(ArithmeticException.class)
+        .maxWaitDurationInHalfOpenState(Duration.ofSeconds(30))
+        .build();
+
+    var timeLimiterConfig = TimeLimiterConfig.custom()
+        .cancelRunningFuture(true)
+        .timeoutDuration(Duration.ofSeconds(3))
+        .build();
+
+    var circuitBreakerId = "healthCheck";
+
+    return factory -> {
+      factory.addCircuitBreakerCustomizer(loggingCustomizer(), circuitBreakerId);
+      factory.configure(builder -> {
+        builder
+            .circuitBreakerConfig(circuitBreakerConfig)
+            .timeLimiterConfig(timeLimiterConfig);
+      }, circuitBreakerId);
+    };
+  }
+
+  private Customizer<CircuitBreaker> loggingCustomizer(){
+    return Customizer.once(circuitBreaker -> {
+      var cbName = circuitBreaker.getName();
+      circuitBreaker.getEventPublisher()
+          .onSuccess(event -> log.info("circuit breaker ({}) success", cbName))
+          .onError(event -> log.info("circuit breaker ({}) error ===> {}", cbName, event.getThrowable().toString()))
+          .onStateTransition(event -> {
+            log.info("circuit breaker ({}) changed from {} to {}",
+                cbName,
+                event.getStateTransition().getFromState(),
+                event.getStateTransition().getToState());
+          })
+          .onSlowCallRateExceeded(event ->
+              log.info("circuit breaker ({}) slow call rate exceeded ===> {}",
+                  cbName, event.getSlowCallRate()))
+          .onFailureRateExceeded(event ->
+              log.info("circuit breaker ({}) failure rate exceeded ===> {}",
+                  cbName, event.getFailureRate()));
+
+    }, CircuitBreaker::getName);
+  }
+
+  @Bean
+  public Customizer<ReactiveResilience4JCircuitBreakerFactory> defaultCustomizer(){
+    return factory -> {
+      factory.configureDefault(id -> {
+        factory.addCircuitBreakerCustomizer(loggingCustomizer(), id);
+        return new Resilience4JConfigBuilder(id)
+            .circuitBreakerConfig(CircuitBreakerConfig.ofDefaults())
+            .build();
+      });
+    };
+  }
+
+  @Bean
+  public Customizer<ReactiveResilience4JCircuitBreakerFactory> tinyCustomizer(){
+    var cbConfig = CircuitBreakerConfig.custom()
+        .failureRateThreshold(50)
+        .slidingWindowSize(3)
+        .build();
+
+    var targets = new String[]{"tiny"};
+    return factory -> {
+      factory.addCircuitBreakerCustomizer(loggingCustomizer(), targets);
+      factory.configure(
+          builder -> builder.circuitBreakerConfig(cbConfig),
+          targets
+      );
+    };
+  }
+
+  @Bean
+  public Customizer<ReactiveResilience4JCircuitBreakerFactory> autoHalf(){
+    var cbConfig = CircuitBreakerConfig.custom()
+        .failureRateThreshold(50)
+        .slidingWindowSize(3)
+        .enableAutomaticTransitionFromOpenToHalfOpen() // auto half 설정
+        .waitDurationInOpenState(Duration.ofSeconds(5))
+        .build();
+
+    var targets = new String[]{"autoHalf"};
+    return factory -> {
+      factory.addCircuitBreakerCustomizer(
+          loggingCustomizer(), targets);
+      factory.configure(builder -> {
+        builder.circuitBreakerConfig(cbConfig);
+      }, targets);
+    };
+  }
+
+  @Bean
+  public Customizer<ReactiveResilience4JCircuitBreakerFactory> halfOpen() {
+    var cbConfig = CircuitBreakerConfig.custom()
+        .failureRateThreshold(50)
+        .slidingWindowSize(3)
+        .enableAutomaticTransitionFromOpenToHalfOpen()
+        .waitDurationInOpenState(Duration.ofSeconds(3))
+        .permittedNumberOfCallsInHalfOpenState(6) //
+        .build();
+
+    var targets = new String[]{"halfOpen"};
+
+    return factory -> {
+      factory.addCircuitBreakerCustomizer(loggingCustomizer(), targets);
+      factory.configure(
+          builder -> builder.circuitBreakerConfig(cbConfig),
+          targets
+      );
+    };
+  }
+}
+```
+
+<br/>
 
 
 
-### half open
+### Delay 없을 때 CircuitBreaker 가 구동되는지 테스트
+
+간단한 몸풀기 용도의 예제입니다.
+
+```java
+@Slf4j
+@Import(TestCircuitBreakerConfig.class)
+@ImportAutoConfiguration(
+    classes = {
+        ReactiveResilience4JAutoConfiguration.class,
+        Resilience4JAutoConfiguration.class,
+        CircuitBreakerAutoConfiguration.class,
+        TimeLimiterAutoConfiguration.class
+    }
+)
+@SpringBootTest
+public class HealthCheckCircuitBreakerTest {
+  @Autowired
+  private ReactiveHealthcheckService reactiveHealthcheckService;
+  @Autowired
+  private CircuitBreakerRegistry circuitBreakerRegistry;
+  @SpyBean
+  private Ready ready;
+
+  String fallbackMessage = "FoobarHealthCircuitBreaker Fallback";
+    
+  @DisplayName("READY_WITHOUT_DELAY")
+  @Test
+  public void TEST_READY_WITHOUT_DELAY(){
+    // given
+    var serviceName = "order-service";
+    var expectedMessage = String.format("OK (%s)", serviceName);
+
+    // when
+    var mono = reactiveHealthcheckService.ready(serviceName, 0L);
+
+    // then
+    StepVerifier.create(mono)
+        .expectNext(expectedMessage)
+        .verifyComplete();
+
+    Mockito.verify(ready).ok(serviceName);
+  }
+  
+  // ...
+
+}
+```
+
+<br/>
 
 
 
-### open
+### Close → Open
+
+테스트로 사용한 서킷브레이커의 설정은 아래와 같습니다.
+
+```java
+@Slf4j
+@TestConfiguration
+public class TestCircuitBreakerConfig {
+  // ...
+  
+  @Bean
+  public Customizer<ReactiveResilience4JCircuitBreakerFactory> tinyCustomizer(){
+    var cbConfig = CircuitBreakerConfig.custom()
+        .failureRateThreshold(50)
+        .slidingWindowSize(3)
+        .build();
+
+    var targets = new String[]{"tiny"};
+    return factory -> {
+      factory.addCircuitBreakerCustomizer(loggingCustomizer(), targets);
+      factory.configure(
+          builder -> builder.circuitBreakerConfig(cbConfig),
+          targets
+      );
+    };
+  }
+    
+  // ...
+    
+}
+```
+
+<br/>tiny 라는 이름의 CircuitBreaker 를 이용해서 `ready()` 기능을 호출합니다. 주석으로 설명을 추가해두었기 때문에 자세한 설명은 생략하겠습니다.
+
+```java
+@Slf4j
+@Import(TestCircuitBreakerConfig.class)
+@ImportAutoConfiguration(
+    classes = {
+        ReactiveResilience4JAutoConfiguration.class,
+        Resilience4JAutoConfiguration.class,
+        CircuitBreakerAutoConfiguration.class,
+        TimeLimiterAutoConfiguration.class
+    }
+)
+@SpringBootTest
+public class HealthCheckCircuitBreakerTest {
+  @Autowired
+  private ReactiveHealthcheckService reactiveHealthcheckService;
+  @Autowired
+  private CircuitBreakerRegistry circuitBreakerRegistry;
+  @SpyBean
+  private Ready ready;
+
+  String fallbackMessage = "FoobarHealthCircuitBreaker Fallback";
+  
+  // ...
+  
+  // tiny 회로차단기 ON 되는 테스트 케이스
+  @DisplayName("READY_METHOD_MAKE_CB_STATE_OPEN")
+  @Test
+  public void TEST_READY_METHOD_MAKE_CB_STATE_OPEN(){
+    // given
+    String serviceName = "order-service";
+    String successMessage = String.format("OK (%s)", serviceName);
+    String expectedMessage = fallbackMessage;
+
+    // when (delay 없는 call 은 성공, 3개의 call 실행, Sliding Window 채우기 위한 용도)
+    for(int i=0; i<3; i++){
+      StepVerifier.create(reactiveHealthcheckService.readyWithId("tiny", serviceName, 0L))
+          .expectNext(successMessage)
+          .verifyComplete();
+    }
+
+    // then (5s delay call 을 2번 실행 -> 50% 실패 -> circuit breaker closed)
+    for(int i=0; i<2; i++){
+      StepVerifier
+          .withVirtualTime(()->reactiveHealthcheckService.readyWithId("tiny", serviceName, 7000L))
+          .thenAwait(Duration.ofSeconds(2))
+          .expectNext(expectedMessage)
+          .verifyComplete();
+    }
+
+    for(int i=0; i<100; i++){
+      StepVerifier
+          .create(reactiveHealthcheckService.readyWithId("tiny", serviceName, 0L))
+          .expectNext(expectedMessage)
+          .verifyComplete();
+    }
+
+    Mockito.verify(ready, Mockito.times(3)).ok(serviceName);
+  }
+  
+  // ...
+
+}
+```
+
+<br/>
+
+
+
+### Open → Half Open
+
+#### (수동전환) 하드코딩으로 Half State 로 전환
+
+추천되는 방식은 아닙니다. 
+
+테스트에서 사용하는 서킷브레이커 설정은 아래와 같습니다.
+
+```java
+@Slf4j
+@TestConfiguration
+public class TestCircuitBreakerConfig {
+  // ...
+  
+  @Bean
+  public Customizer<ReactiveResilience4JCircuitBreakerFactory> tinyCustomizer(){
+    var cbConfig = CircuitBreakerConfig.custom()
+        .failureRateThreshold(50)
+        .slidingWindowSize(3)
+        .build();
+
+    var targets = new String[]{"tiny"};
+    return factory -> {
+      factory.addCircuitBreakerCustomizer(loggingCustomizer(), targets);
+      factory.configure(
+          builder -> builder.circuitBreakerConfig(cbConfig),
+          targets
+      );
+    };
+  }
+    
+  // ...
+    
+}
+```
+
+<br/>
+
+
+
+테스트 코드는 아래와 같습니다.<br/>
+
+```java
+@Slf4j
+@Import(TestCircuitBreakerConfig.class)
+@ImportAutoConfiguration(
+    classes = {
+        ReactiveResilience4JAutoConfiguration.class,
+        Resilience4JAutoConfiguration.class,
+        CircuitBreakerAutoConfiguration.class,
+        TimeLimiterAutoConfiguration.class
+    }
+)
+@SpringBootTest
+public class HealthCheckCircuitBreakerTest {
+  @Autowired
+  private ReactiveHealthcheckService reactiveHealthcheckService;
+  @Autowired
+  private CircuitBreakerRegistry circuitBreakerRegistry;
+  @SpyBean
+  private Ready ready;
+
+  String fallbackMessage = "FoobarHealthCircuitBreaker Fallback";
+  
+  // ...
+  
+  // 회로차단기 OPEN (ON) 상태 -> HALF OPEN 상태 테스트 케이스
+  @DisplayName("READY_METHOD_MAKE_CB_STATE_FROM_OPEN_TO_HALF_OPEN_DEFAULT_OPTION")
+  @Test
+  public void TEST_READY_METHOD_MAKE_CB_STATE_FROM_OPEN_TO_HALF_OPEN_DEFAULT_OPTION(){
+    // given
+    String serviceName = "order-service";
+    String successMessage = String.format("OK (%s)", serviceName);
+
+    // 차단(OPEN, ON) 된 차단기 준비
+    for(int i=0; i<3; i++){
+      StepVerifier.withVirtualTime(()->reactiveHealthcheckService.readyWithId("tiny", serviceName, 5000L))
+          .thenAwait(Duration.ofSeconds(2))
+          .expectNext(fallbackMessage)
+          .verifyComplete();
+    }
+
+    // when
+    var tinyCb = circuitBreakerRegistry.circuitBreaker("tiny");
+    tinyCb.transitionToHalfOpenState();
+    log.info("Half Open 상태로 전환 완료");
+
+    // then
+    var state = circuitBreakerRegistry.circuitBreaker("tiny").getState();
+    Assertions.assertThat(state).isEqualTo(CircuitBreaker.State.HALF_OPEN);
+
+    StepVerifier.create(reactiveHealthcheckService.readyWithId("tiny", serviceName, 0L))
+        .expectNext(successMessage)
+        .verifyComplete();
+  }
+  
+  // ...
+
+}
+```
+
+<br/>
+
+
+
+#### (자동전환) 일정 시간 동안 CircuitBreaker 가 기다린 후 체크하도록 하는 방식
+
+CircuitBreaker 설정 코드에서는 `autoHalf` 라는 설정이 있는데 아래와 같이 설정했습니다.
+
+```java
+@Slf4j
+@TestConfiguration
+public class TestCircuitBreakerConfig {
+  // ...
+  
+  @Bean
+  public Customizer<ReactiveResilience4JCircuitBreakerFactory> autoHalf(){
+    var cbConfig = CircuitBreakerConfig.custom()
+        .failureRateThreshold(50)
+        .slidingWindowSize(3)
+        .enableAutomaticTransitionFromOpenToHalfOpen() // auto half 설정
+        .waitDurationInOpenState(Duration.ofSeconds(5))
+        .build();
+
+    var targets = new String[]{"autoHalf"};
+    return factory -> {
+      factory.addCircuitBreakerCustomizer(
+          loggingCustomizer(), targets);
+      factory.configure(builder -> {
+        builder.circuitBreakerConfig(cbConfig);
+      }, targets);
+    };
+  }
+```
+
+<br/>
+
+
+
+테스트 코드는 아래와 같습니다.
+
+```java
+@Slf4j
+@Import(TestCircuitBreakerConfig.class)
+@ImportAutoConfiguration(
+    classes = {
+        ReactiveResilience4JAutoConfiguration.class,
+        Resilience4JAutoConfiguration.class,
+        CircuitBreakerAutoConfiguration.class,
+        TimeLimiterAutoConfiguration.class
+    }
+)
+@SpringBootTest
+public class HealthCheckCircuitBreakerTest {
+  @Autowired
+  private ReactiveHealthcheckService reactiveHealthcheckService;
+  @Autowired
+  private CircuitBreakerRegistry circuitBreakerRegistry;
+  @SpyBean
+  private Ready ready;
+    
+  // ...
+    
+  @SneakyThrows
+  @DisplayName("READY_METHOD_MAKE_CB_STATE_FROM_OPEN_TO_HALF_OPEN_AUTO_DETECT")
+  @Test
+  public void TEST_READY_METHOD_MAKE_CB_STATE_FROM_OPEN_TO_HALF_OPEN_AUTO_DETECT(){
+    // given
+    String serviceName = "order-service";
+    String successMessage = String.format("OK (%s)", serviceName);
+
+    // 회로차단기가 ON (OPEN) 되도록 지연을 유발하는 CALL 호출 3회 수행
+    for(int i=0; i<3; i++){
+      StepVerifier
+          .withVirtualTime(()-> reactiveHealthcheckService.readyWithId("autoHalf", serviceName, 5000L))
+          .thenAwait(Duration.ofSeconds(3))
+          .expectNext(fallbackMessage)
+          .verifyComplete();
+    }
+
+    // when
+    log.info("7초 대기");
+    Thread.sleep(7000);
+
+    // then
+    var state = circuitBreakerRegistry.circuitBreaker("autoHalf").getState();
+    Assertions.assertThat(state).isEqualTo(CircuitBreaker.State.HALF_OPEN);
+
+    StepVerifier.create(reactiveHealthcheckService.readyWithId("autoHalf", serviceName, 0L))
+        .expectNext(successMessage)
+        .verifyComplete();
+  }
+ 
+  // ...
+}
+```
+
+<br/>
+
+
+
+### Half Open → Close
+
+테스트를 위해 사용하는 서킷브레이커 설정은 아래와 같습니다.
+
+```java
+@Slf4j
+@TestConfiguration
+public class TestCircuitBreakerConfig {
+  // ...
+  
+  @Bean
+  public Customizer<ReactiveResilience4JCircuitBreakerFactory> halfOpen() {
+    var cbConfig = CircuitBreakerConfig.custom()
+        .failureRateThreshold(50)
+        .slidingWindowSize(3)
+        .enableAutomaticTransitionFromOpenToHalfOpen()
+        .waitDurationInOpenState(Duration.ofSeconds(3))
+        .permittedNumberOfCallsInHalfOpenState(6) //
+        .build();
+
+    var targets = new String[]{"halfOpen"};
+
+    return factory -> {
+      factory.addCircuitBreakerCustomizer(loggingCustomizer(), targets);
+      factory.configure(
+          builder -> builder.circuitBreakerConfig(cbConfig),
+          targets
+      );
+    };
+  }
+  
+  // ...   
+}
+```
+
+<br/>
+
+
+
+테스트코드입니다.
+
+```java
+@Slf4j
+@Import(TestCircuitBreakerConfig.class)
+@ImportAutoConfiguration(
+    classes = {
+        ReactiveResilience4JAutoConfiguration.class,
+        Resilience4JAutoConfiguration.class,
+        CircuitBreakerAutoConfiguration.class,
+        TimeLimiterAutoConfiguration.class
+    }
+)
+@SpringBootTest
+public class HealthCheckCircuitBreakerTest {
+  @Autowired
+  private ReactiveHealthcheckService reactiveHealthcheckService;
+  @Autowired
+  private CircuitBreakerRegistry circuitBreakerRegistry;
+  @SpyBean
+  private Ready ready;
+
+  String fallbackMessage = "FoobarHealthCircuitBreaker Fallback";
+  
+  // ...
+
+  // half open -> close (차단기 OFF)
+  @SneakyThrows
+  @DisplayName("READY_METHOD_MAKE_CB_STATE_FROM_HALF_OPEN_TO_CLOSE")
+  @Test
+  public void TEST_READY_METHOD_MAKE_CB_STATE_FROM_HALF_OPEN_TO_CLOSE(){
+    // given
+    String serviceName = "order-service";
+    String successMessage = String.format("OK (%s)", serviceName);
+    String cbId = "halfOpen";
+
+    for(int i=0; i<3; i++){
+      StepVerifier.withVirtualTime(() -> reactiveHealthcheckService.readyWithId(cbId, serviceName, 5000L))
+          .thenAwait(Duration.ofSeconds(2))
+          .expectNext(fallbackMessage)
+          .verifyComplete();
+    }
+
+    log.info("3초 대기");
+    Thread.sleep(3000);
+
+    // when
+    var successCnt = 4;
+    var failCnt = 2;
+    var total = successCnt + failCnt;
+
+    // 1) 4번 성공시킴
+    for(int i=0; i<successCnt; i++){
+      StepVerifier.withVirtualTime(() -> reactiveHealthcheckService.readyWithId(cbId, serviceName, 0L))
+          .expectNext(successMessage)
+          .verifyComplete();
+    }
+    // 2) 2번 실패 시킴
+    for(int i=0; i<failCnt; i++){
+      StepVerifier.withVirtualTime(() -> reactiveHealthcheckService.readyWithId(cbId, serviceName, 5000L))
+          .thenAwait(Duration.ofSeconds(2))
+          .expectNext(fallbackMessage)
+          .verifyComplete();
+    }
+
+    // then
+    var state = circuitBreakerRegistry
+        .circuitBreaker(cbId)
+        .getState();
+
+    Assertions.assertThat(state).isEqualTo(CircuitBreaker.State.CLOSED);
+  }
+
+  // ...
+  
+}
+```
+
+<br/>
+
+
+
+### Half Open → Open
+
+테스트를 위해 사용하는 서킷브레이커 설정은 아래와 같습니다.
+
+```java
+@Slf4j
+@TestConfiguration
+public class TestCircuitBreakerConfig {
+  // ...
+  
+  @Bean
+  public Customizer<ReactiveResilience4JCircuitBreakerFactory> halfOpen() {
+    var cbConfig = CircuitBreakerConfig.custom()
+        .failureRateThreshold(50)
+        .slidingWindowSize(3)
+        .enableAutomaticTransitionFromOpenToHalfOpen()
+        .waitDurationInOpenState(Duration.ofSeconds(3))
+        .permittedNumberOfCallsInHalfOpenState(6) //
+        .build();
+
+    var targets = new String[]{"halfOpen"};
+
+    return factory -> {
+      factory.addCircuitBreakerCustomizer(loggingCustomizer(), targets);
+      factory.configure(
+          builder -> builder.circuitBreakerConfig(cbConfig),
+          targets
+      );
+    };
+  }
+  
+  // ...   
+}
+```
+
+<br/>
+
+
+
+테스트코드입니다.
+
+```java
+@Slf4j
+@Import(TestCircuitBreakerConfig.class)
+@ImportAutoConfiguration(
+    classes = {
+        ReactiveResilience4JAutoConfiguration.class,
+        Resilience4JAutoConfiguration.class,
+        CircuitBreakerAutoConfiguration.class,
+        TimeLimiterAutoConfiguration.class
+    }
+)
+@SpringBootTest
+public class HealthCheckCircuitBreakerTest {
+  @Autowired
+  private ReactiveHealthcheckService reactiveHealthcheckService;
+  @Autowired
+  private CircuitBreakerRegistry circuitBreakerRegistry;
+  @SpyBean
+  private Ready ready;
+
+  String fallbackMessage = "FoobarHealthCircuitBreaker Fallback";
+  
+  // ...
+  
+  // half open -> open (차단기 ON)
+  @SneakyThrows
+  @DisplayName("READY_METHOD_MAKE_CB_STATE_FROM_HALF_OPEN_TO_OPEN")
+  @Test
+  public void TEST_READY_METHOD_MAKE_CB_STATE_FROM_HALF_OPEN_TO_OPEN(){
+    // given
+    String serviceName = "order-service";
+    String successMessage = String.format("OK (%s)", serviceName);
+    String cbId = "halfOpen";
+
+    for(int i=0; i<3; i++){
+      StepVerifier
+          .withVirtualTime(() -> reactiveHealthcheckService.readyWithId(cbId, serviceName, 5000L))
+          .thenAwait(Duration.ofSeconds(2))
+          .expectNext(fallbackMessage)
+          .verifyComplete();
+    }
+
+    log.info("3초 대기");
+    Thread.sleep(3000);
+
+    // when (실패율 50% 로 조정)
+    var successCnt = 3;
+    var failCnt = 3;
+    var total = successCnt + failCnt;
+
+    for(int i=0; i<successCnt; i++){
+      StepVerifier
+          .create(reactiveHealthcheckService.readyWithId(cbId, serviceName, 0L))
+          .expectNext(successMessage)
+          .verifyComplete();
+    }
+
+    for(int i=0; i<failCnt; i++){
+      StepVerifier
+          .withVirtualTime(() -> reactiveHealthcheckService.readyWithId(cbId, serviceName, 5000L))
+          .thenAwait(Duration.ofSeconds(2))
+          .expectNext(fallbackMessage)
+          .verifyComplete();
+    }
+
+    // then
+    var state = circuitBreakerRegistry.circuitBreaker(cbId)
+        .getState();
+    Assertions.assertThat(state).isEqualTo(CircuitBreaker.State.OPEN);
+  }
+}
+```
+
+
+
+
+
+
 
 
 
