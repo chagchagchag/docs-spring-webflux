@@ -1,4 +1,4 @@
-## Spring Webflux 의 Backpressure 핸들링
+## Spring Webflux 에서 Backpressure 핸들링
 
 우선 결론부터 이야기하면, spring webflux 에서는 Backpressure 를 지원하지만, 효율적으로 제공하지는 않습니다. TCP 요청/응답을 처리하기 위한 Backpressure 로직이기에 비즈니스로직의 요구사항에 따라서  커스텀한 backpressure 처리 또는 I/O 처리가 중요한 경우 별도의 backpressure 처리로직을 작성해야 합니다.<br/>
 
