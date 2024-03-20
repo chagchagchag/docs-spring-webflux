@@ -284,6 +284,27 @@ public class NSizedMessageSubscriber<T> implements Flow.Subscriber<T>{
 }
 ```
 
+<br/>
+
+
+
+출력결과
+
+```plain
+12:31:01.664 [pool-1-thread-1] INFO io.chagchagchag.example.foobar.reactive_streams.publisher_subscriber.n_sized_message.NSizedMessageSubscriber -- (onNext) item = Message[message=1.배고파요, requestedCnt=1]
+12:31:01.689 [pool-1-thread-1] INFO io.chagchagchag.example.foobar.reactive_streams.publisher_subscriber.n_sized_message.NSizedMessageSubscriber -- >>> onNext : request 를 publisher 의 subscription 에 전송합니다.
+12:31:01.690 [pool-1-thread-1] INFO io.chagchagchag.example.foobar.reactive_streams.publisher_subscriber.n_sized_message.NSizedMessageSubscriber -- (onNext) item = Message[message=2.편의점가요, requestedCnt=2]
+12:31:01.690 [pool-1-thread-1] INFO io.chagchagchag.example.foobar.reactive_streams.publisher_subscriber.n_sized_message.NSizedMessageSubscriber -- (onNext) item = Message[message=3.먹을게 없네요, requestedCnt=2]
+12:31:01.690 [pool-1-thread-1] INFO io.chagchagchag.example.foobar.reactive_streams.publisher_subscriber.n_sized_message.NSizedMessageSubscriber -- (onNext) item = Message[message=4.다이어트하자요, requestedCnt=2]
+12:31:01.690 [pool-1-thread-1] INFO io.chagchagchag.example.foobar.reactive_streams.publisher_subscriber.n_sized_message.NSizedMessageSubscriber -- (onNext) item = Message[message=5.산책해요, requestedCnt=2]
+12:31:01.690 [pool-1-thread-1] INFO io.chagchagchag.example.foobar.reactive_streams.publisher_subscriber.n_sized_message.NSizedMessageSubscriber -- (onNext) item = Message[message=6.잠자요, requestedCnt=2]
+12:31:01.690 [pool-1-thread-1] INFO io.chagchagchag.example.foobar.reactive_streams.publisher_subscriber.n_sized_message.NSizedMessageSubscriber -- >>> onNext : request 를 publisher 의 subscription 에 전송합니다.
+12:31:01.690 [pool-1-thread-1] INFO io.chagchagchag.example.foobar.reactive_streams.publisher_subscriber.n_sized_message.NSizedMessageSubscriber -- (onNext) item = Message[message=7.퇴근해요, requestedCnt=3]
+12:31:01.690 [pool-1-thread-1] INFO io.chagchagchag.example.foobar.reactive_streams.publisher_subscriber.n_sized_message.NSizedMessageSubscriber -- complete
+
+Process finished with exit code 0
+```
+
 
 
 
