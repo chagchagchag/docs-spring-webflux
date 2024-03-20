@@ -1,0 +1,140 @@
+## Spring Webflux 의 Backpressure 핸들링
+
+우선 결론부터 이야기하면, spring webflux 에서는 Backpressure 를 지원하지만, 효율적으로 제공하지는 않습니다. 따라서 backpressure 처리가 중요한 경우 별도의 backpressure 처리로직을 작성해야 합니다.<br/>
+
+
+
+## 참고자료
+
+- [Backpressure Mechanism in Spring Webflux](https://www.baeldung.com/spring-webflux-backpressure)
+- [Spring Webflux 의 배압 메커니즘](https://recordsoflife.tistory.com/1329)
+
+> 오늘 문서는 [Backpressure Mechanism in Spring Webflux](https://www.baeldung.com/spring-webflux-backpressure) 을 요약하면서 [Spring Webflux 의 배압 메커니즘](https://recordsoflife.tistory.com/1329) 의 내용을 참고해서 요약한 내용입니다.<br/>
+
+<br/>
+
+
+
+## backpressure(배압) 이란?
+
+일반적인 backpressure 의 뜻 은 소프트웨어 시스템에서는 트래픽 통신에 부하를 주는 기능을 의미합니다. 
+
+그런데 이 단어는 정반대의 의미로도 쓰입니다. backpressure 는 트래픽 통신에 부하를 주는 기능을 처리하는 메커니즘이라는 의미로도 사용합니다. 조금 더 자세히 설명하면, "시스템이 다운 스트림을 제어하고 처리하는 데에 취하는 보호조치" 를 backpressure 메커니즘으로도 부릅니다.<br/>
+
+오늘 이 문서에서 정리하는 내용은 "다운스트림의 부하를 제어하고 처리하는 데에 취하는 보호조치라는 의미에서의 backpressure" 의 개념입니다.<br/>
+
+그리고 backpressure 라는 용어와는 혼선을 피하기 위해 backpressure 를 제어한다, backpressure 를 관리한다라는 말을 따로 쓰고, backpressure 단어 자체는 그 자체로 시스템 부하 상황에 대해서만 사용하겠습니다.<br/>
+
+<br/> 
+
+## e.g. backpressure 가 발생하는상황
+
+- Publisher, Consumer, GUI 가 있는 시스템이 있습니다.
+- Publisher 는 10000/s 의 이벤트를 Consumer 로 보냅니다.
+- Consumer 는 이것을 처리해야 하고 결과를 GUI 에 보냅니다.
+- GUI 는 이 결과를 표시합니다.
+- 소비자는 7500/s 의 이벤트만 처리 가능합니다.
+
+![](https://www.baeldung.com/wp-content/uploads/2021/04/Screenshot-2021-02-18-at-13.10.26-1024x313-1.png)
+
+> 이미지 출처 : https://www.baeldung.com/spring-webflux-backpressure
+
+<br/>
+
+이 속도로는 Consumer 가 backpressure 를 처리할 수 없습니다. 결국 시스템은 붕괴되고 사용자는 결과를 볼 수 없게 됩니다.<br/>
+
+<br/>
+
+
+
+## 일반적인 backpressure 전략
+
+일반적인 backpressure 를 처리할 때에는 아래와 같은 방식으로 제어를 하게 됩니다.
+
+- 첫번째 옵션 : 전송된 데이터 스트림 제어
+  - 이 방식에서는 Publisher 가 이벤트 속도를 늦춰야 합니다. 이렇게 Publisher 에서 속도를 늦추면 Consumer는 과부하(overload)가 발생하지 않습니다. 이 방식은 모든 경우에 사용할 수 있는 방식이 아니기에 사용가능한 다른 옵션을 찾아야 할 수 있습니다.
+- 두번째 옵션 : 여분의 데이터를 버퍼링
+  - 이 방식에서는 소비자는 나머지 이벤트를 처리할 수 있을 때 까지 임시로 데이터를 저장합니다. 즉, 버퍼링을 하는 방식입니다. 이 방식의 단점은 메모리의 충돌을 일으키는 버퍼 바인딩을 해제하는 것입니다.
+- 세번째 옵션 : 추적하지 못하는 추가 이벤트 삭제
+  - 너무 오래된 이벤트일경우 삭제하는 방식. 이상적인 방식은 아닙니다. 이 기술을 사용하면 시스템이 붕괴되지는 않습니다.
+
+<br/>
+
+![](https://www.baeldung.com/wp-content/uploads/2021/04/Screenshot-2021-02-18-at-16.48.38-1024x476-1-768x357.png)
+
+> 이미지 출처 : https://www.baeldung.com/spring-webflux-backpressure
+
+<br/>
+
+
+
+## 이벤트 스트림 기반의 배압 제어
+
+이 방식은 Publisher 가 보낸 이벤트를 제어하는 데에 중점을 두는 방식입니다.
+
+- request : Subscriber 가 요청할 경우에만 새로운 이벤트를 전송
+  - emitter 요청시 엘리먼트 들을 수집하는 Pull 전략입니다.
+- limit : Client 측에서 수신할 이벤트 수를 제한
+  - 위에서 정리한 제한된 푸시 전략으로 작동하며, Publisher 는 한번에 클라이언트에게 최대 항목 수를 보낼 수 있습니다.
+- cancel : Consumer 가 더 아싱 이벤트를 처리할 수 없을 때 데이터 스트리밍을 취소합니다.
+  - Consumer 는 언제든지 전송을 중단하고 다시 스트림을 구독할 수 있습니다.
+
+
+
+![](https://www.baeldung.com/wp-content/uploads/2021/04/Screenshot-2021-02-25-at-16.51.46-1024x380-1.png)
+
+> 이미지 출처 : https://www.baeldung.com/spring-webflux-backpressure
+
+<br/>
+
+
+
+## Spring Webflux 의 backpressure 처리
+
+Spring Webflux 에서는 [Project Reactor](https://projectreactor.io/docs/core/release/reference/#reactive.backpressure) 가 배압의 처리를 담당하고 있습니다. 내부적으로는 [Flux 의 개념을(On Backpressure and Ways to Reshape Requests)](https://projectreactor.io/docs/core/release/reference/#_on_backpressure_and_ways_to_reshape_requests) 사용해서 emitter 에서 생성된 이벤트를 제어하는 역할을 수행합니다.<br/>
+
+webflux 는 TCP 흐름제어를 이용해서 Backpressure 를 바이트 단위로 조절합니다. 하지만 소비자가 받을 수 있는 논리적인 요소까지는 처리하지 않습니다.<br/>
+
+내부 동작은 아래와 같이 동작합니다.
+
+- webflux 프레임워크는 TCP 를 통해 이벤트 전송/수신을 위해 이벤트를 바이트로 변환하는 역할을 합니다.
+- 다음 논리적 요소를 요청하기 전에 소비자가 시작하고 장기 실행 작업이 발생할 수 있습니다.
+- 수신자가 이벤트를 처리하는 동안 WebFlux는 새로운 이벤트에 대한 요구가 없기 때문에 확인 없이 바이트를 큐에 넣습니다.
+- TCP 프로토콜의 특성으로 인해 새 이벤트가 있으면 게시자가 계속해서 네트워크로 보냅니다.
+
+![](https://www.baeldung.com/wp-content/uploads/2021/04/Screenshot-2021-03-19-at-16.40.30-1024x304-1.png)
+
+> 이미지 출처 : https://www.baeldung.com/spring-webflux-backpressure
+
+
+
+그림을 자세히 보면 Consumer 는 일정하게 TCP 계층에 request(1), onNext() 를 하고 있지만, TCP 계층에서 Publisher 에 요청할 때에는 request 시에는 request(10)을 하고 onNext 시에는 onNext(!) 을 합니다.<br/>
+
+> webflux 은 단순히 TCP/IP 를 효율적으로 수행하는 계층이고, 사용자 영역에서의 논리적인 데이터(비즈니스로직)을 효율적으로 처리하기 위한 것은 사용자 레벨에서 직접 작성해야 한다는 사실을 알 수 있습니다.
+
+<br/>
+
+
+
+## webflux 에서 사용자 정의 backpressure 처리 로직 구현
+
+위의 `이벤트 스트림 기반의 배압 제어` 에서 정리한 아래의 세가지 요소들을 정의하는 세가지 예제를 살펴봅니다.
+
+- request(n)
+- limitRate()
+- cancel()
+
+
+
+
+
+### request(n)
+
+### limitRate()
+
+### cancel
+
+
+
+
+
