@@ -1,6 +1,12 @@
 ## Spring Webflux 의 Backpressure 핸들링
 
-우선 결론부터 이야기하면, spring webflux 에서는 Backpressure 를 지원하지만, 효율적으로 제공하지는 않습니다. 따라서 backpressure 처리가 중요한 경우 별도의 backpressure 처리로직을 작성해야 합니다.<br/>
+우선 결론부터 이야기하면, spring webflux 에서는 Backpressure 를 지원하지만, 효율적으로 제공하지는 않습니다. TCP 요청/응답을 처리하기 위한 Backpressure 로직이기에 비즈니스로직의 요구사항에 따라서  커스텀한 backpressure 처리 또는 I/O 처리가 중요한 경우 별도의 backpressure 처리로직을 작성해야 합니다.<br/>
+
+이글의 하단부의 예제에서 나오는 [BaseSubscriber](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/BaseSubscriber.html) 와 같은 Subscriber 구현체들을 잘 활용하면 목적에 따라 Subscriber 를 구현해서 backpressure 를 실무에서도 관리할 수 있습니다.<br/>
+
+Subscriber 와 Publiser 를 처음부터 모두 구현하는 예제였던 [/reactive-programming/publisher-subscriber-subscription-backpressure/](/reactive-programming/publisher-subscriber-subscription-backpressure/) 글의 예제와 이 글의 하단부의 BaseSubscriber 예제를 잘 활용해서 Spring Webflux 내에서 컴포넌트 화 한다면 특정 부하가 높은 IO 처리를 이벤트 지향적으로 관리할 수 있게 될 것 같습니다.<br/>
+
+<br/>
 
 
 
@@ -110,7 +116,7 @@ webflux 는 TCP 흐름제어를 이용해서 Backpressure 를 바이트 단위�
 
 그림을 자세히 보면 Consumer 는 일정하게 TCP 계층에 request(1), onNext() 를 하고 있지만, TCP 계층에서 Publisher 에 요청할 때에는 request 시에는 request(10)을 하고 onNext 시에는 onNext(!) 을 합니다.<br/>
 
-> webflux 은 단순히 TCP/IP 를 효율적으로 수행하는 계층이고, 사용자 영역에서의 논리적인 데이터(비즈니스로직)을 효율적으로 처리하기 위한 것은 사용자 레벨에서 직접 작성해야 한다는 사실을 알 수 있습니다.
+> webflux 는 단순히 TCP/IP 를 효율적으로 수행하는 계층이고, 사용자 영역에서의 논리적인 데이터(비즈니스로직)을 효율적으로 처리하기 위한 것은 사용자 레벨에서 직접 작성해야 한다는 사실을 알 수 있습니다.
 
 <br/>
 
@@ -124,15 +130,219 @@ webflux 는 TCP 흐름제어를 이용해서 Backpressure 를 바이트 단위�
 - limitRate()
 - cancel()
 
-
+<br/>
 
 
 
 ### request(n)
 
-### limitRate()
+첫번째 원칙인 `request : Subscriber 가 요청할 경우에만 새로운 이벤트를 전송` 에 대한 예제를 살펴보면 아래와 같습니다.
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams.webflux_backpressure;
+
+import java.util.concurrent.Flow.Subscription;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
+
+public class WebFluxBackpressureTests {
+  @DisplayName("REQUEST_CHUNK")
+  @Test
+  public void TEST_REQUEST_CHUNK(){
+    // given
+    Flux<Integer> request = Flux.range(1,50);
+
+    // when
+    request
+        .subscribe(
+            System.out::println,
+            throwable -> throwable.printStackTrace(),
+            () -> System.out.println("50개 요청 모두 완료"),
+            subscription -> {
+              for(int i=0; i<5; i++){
+                System.out.println(">>> request 10 element ");
+                subscription.request(10);
+              }
+            }
+        );
+
+    // then
+    StepVerifier.create(request)
+        .expectSubscription()
+        .thenRequest(10)
+        .expectNext(1,2,3,4,5,6,7,8,9,10)
+        .thenRequest(10)
+        .expectNext(11,12,13,14,15,16,17,18,19,20)
+        .thenRequest(10)
+        .expectNext(21,22,23,24,25,26,27,28,29,30)
+        .thenRequest(10)
+        .expectNext(31,32,33,34,35,36,37,38,39,40)
+        .thenRequest(10)
+        .expectNext(41,42,43,44,45,46,47,48,49,50)
+        .verifyComplete();
+  }
+  
+}
+```
+
+<br/>
+
+`given` 영역에서는 Flux 를 통해 데이터를 결정합니다. `when` 에서는 Flux 를 subscribe 하는데, 일반적인 subscribe 와는 다르게 한번 요청시마다 10개씩 요청하고 있습니다. [Subscription](https://www.reactive-streams.org/reactive-streams-1.0.0-javadoc/org/reactivestreams/Subscription.html), [Subscription.java](https://github.com/reactive-streams/reactive-streams-jvm/blob/master/api/src/main/java/org/reactivestreams/Subscription.java) 의 request 메서드는 backpressure 를 처리하기 위해 제공되는 메서드 입니다.<br/>
+
+<br/>
+
+
+
+### limitRate(limitSize)
+
+두번째 원칙인 `limit : Client 측에서 수신할 이벤트 수를 제한` 에 대한 예제를 살펴보면 아래와 같습니다.
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams.webflux_backpressure;
+
+import java.util.concurrent.Flow.Subscription;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
+
+public class WebFluxBackpressureTests {
+  // ...
+  @DisplayName("LIMIT_RATE")
+  @Test
+  public void TEST_LIMIT_RATE(){
+    // given
+    Flux<Integer> flux = Flux.range(1, 25); // (1)
+
+    // when
+    flux.limitRate(10);
+    flux.subscribe(
+        System.out::println,
+        err -> err.printStackTrace(),
+        () -> System.out.println("Finished"),
+        subscription -> subscription.request(15)
+    );
+
+    // then
+    StepVerifier.create(flux)
+        .expectSubscription()
+        .thenRequest(15)
+        .expectNext(1,2,3,4,5,6,7,8,9,10) // limit 10 수행
+        .expectNext(11,12,13,14,15) // 15 중 남은 5개 수행
+        .thenRequest(10) // limit 10 수행
+        .expectNext(16,17,18,19,20,21,22,23,24,25)
+        .verifyComplete();
+  }
+}
+```
+
+<br/>
+
+
+
+위의 코드를 보면 Publisher 인 Flux 를 subscribe 시에 Subscription 객체를 이용해서 backpressure 처리 메서드인 request() 메서드를 수행하고 있는데 15개씩의 element 를 요청하고 있습니다. 그런데 (1) 에서 Flux 를 생성하면서 이미 Publisher 의 유량을 limitRate (10) 을 통해 limit 을 걸어두었습니다.<br/>
+
+따라서 request(n)을 통해 backpressure 시에 n 만큼의 데이터를 읽어오도록 요청을 하더라도 Publisher 에 걸려있는 limit 만큼 잘라서 응답받습니다. 그리고 잘린데이터는 다음 시퀀스에 받아옵니다.<br/>
+
+
+
+출력결과
+
+```plain
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
 
 ### cancel
+
+세번째 원칙인 `cancel : Consumer 가 더 아싱 이벤트를 처리할 수 없을 때 데이터 스트리밍을 취소합니다.` 에 대한 예제를 살펴보면 아래와 같습니다.
+
+```java
+package io.chagchagchag.example.foobar.reactive_streams.webflux_backpressure;
+
+import java.util.concurrent.Flow.Subscription;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import reactor.core.publisher.BaseSubscriber;
+import reactor.core.publisher.Flux;
+import reactor.test.StepVerifier;
+
+public class WebFluxBackpressureTests {
+  // ...
+  @DisplayName("CANCEL")
+  @Test
+  public void TEST_CANCEL(){
+    // given
+    Flux<Integer> flux = Flux.range(1,10).log();
+
+    // when
+    flux.subscribe(new BaseSubscriber<Integer>() {
+      @Override
+      protected void hookOnNext(Integer value) {
+        request(3);
+        System.out.println(value);
+        cancel();
+      }
+    });
+
+    // then
+    StepVerifier.create(flux)
+        .expectNext(1,2,3)
+        .thenCancel()
+        .verify();
+  }
+}
+```
+
+<br/>
+
+
+
+3개의 element 를 요청한 후에 cancel() 을 통해서 구독을 취소하고 있습니다. 그리고 정상적으로 취소가 되어서 3개의 element 까지만 데이터를 구독했음을 알 수 있습니다.<br/>
+
+<br/>
+
+
+
+출력결과
+
+```plain
+16:19:38.229 [main] INFO reactor.Flux.Range.1 -- | onSubscribe([Synchronous Fuseable] FluxRange.RangeSubscription)
+16:19:38.235 [main] INFO reactor.Flux.Range.1 -- | request(unbounded)
+16:19:38.236 [main] INFO reactor.Flux.Range.1 -- | onNext(1)
+16:19:38.236 [main] INFO reactor.Flux.Range.1 -- | request(3)
+1
+16:19:38.236 [main] INFO reactor.Flux.Range.1 -- | cancel()
+16:19:38.259 [main] INFO reactor.Flux.Range.1 -- | onSubscribe([Synchronous Fuseable] FluxRange.RangeSubscription)
+16:19:38.261 [main] INFO reactor.Flux.Range.1 -- | request(unbounded)
+16:19:38.261 [main] INFO reactor.Flux.Range.1 -- | onNext(1)
+16:19:38.261 [main] INFO reactor.Flux.Range.1 -- | onNext(2)
+16:19:38.261 [main] INFO reactor.Flux.Range.1 -- | onNext(3)
+16:19:38.261 [main] INFO reactor.Flux.Range.1 -- | cancel()
+
+Process finished with exit code 0
+```
 
 
 
