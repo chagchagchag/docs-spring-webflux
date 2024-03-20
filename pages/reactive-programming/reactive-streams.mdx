@@ -1,22 +1,92 @@
 ## Reactive Streams - Publisher, Subscriber 개념, 예제
 
-Publisher, Subscriber 기반의 예제를 다뤄봅니다.
+## 참고
+
+- [reactive streams github](https://github.com/reactive-streams), [reactive-streams-jvm](https://github.com/reactive-streams/reactive-streams-jvm)
+
+- [reactive streams classes](https://www.reactive-streams.org/)
+- [Publisher](https://www.reactive-streams.org/reactive-streams-1.0.0-javadoc/org/reactivestreams/Publisher.html) , [Subscriber](https://www.reactive-streams.org/reactive-streams-1.0.0-javadoc/org/reactivestreams/Subscriber.html), [Subscription](https://www.reactive-streams.org/reactive-streams-1.0.0-javadoc/org/reactivestreams/Subscription.html)
+- [Publisher.java](https://github.com/reactive-streams/reactive-streams-jvm/blob/master/api/src/main/java/org/reactivestreams/Publisher.java) , [Subscriber.java](https://github.com/reactive-streams/reactive-streams-jvm/blob/master/api/src/main/java/org/reactivestreams/Subscriber.java) , [Subscription.java](https://github.com/reactive-streams/reactive-streams-jvm/blob/master/api/src/main/java/org/reactivestreams/Subscription.java)
+
+<br/>
+
+
+
+## Publisher, Subscriber, Supscription
+
+> 참고
+>
+> - [Publisher](https://www.reactive-streams.org/reactive-streams-1.0.0-javadoc/org/reactivestreams/Publisher.html) , [Subscriber](https://www.reactive-streams.org/reactive-streams-1.0.0-javadoc/org/reactivestreams/Subscriber.html), [Subscription](https://www.reactive-streams.org/reactive-streams-1.0.0-javadoc/org/reactivestreams/Subscription.html)
+> - [Publisher.java](https://github.com/reactive-streams/reactive-streams-jvm/blob/master/api/src/main/java/org/reactivestreams/Publisher.java) , [Subscriber.java](https://github.com/reactive-streams/reactive-streams-jvm/blob/master/api/src/main/java/org/reactivestreams/Subscriber.java) , [Subscription.java](https://github.com/reactive-streams/reactive-streams-jvm/blob/master/api/src/main/java/org/reactivestreams/Subscription.java)
+
+<br/>
+
+
+
+Publisher 는 Subscriber 를 등록할 수 있습니다. Subscriber 는 Publisher 에 자기 자신을 등록하기 위해 Publisher::subscribe(Subscriber) 메서드를 실행해서 자기 자신을 등록합니다.<br/>
+
+[Publisher.java](https://github.com/reactive-streams/reactive-streams-jvm/blob/master/api/src/main/java/org/reactivestreams/Publisher.java) 의 코드는 아래와 같이 되어있습니다.<br/>
+
+```java
+package org.reactivestreams;
+public interface Publisher<T> {
+    public void subscribe(Subscriber<? super T> s);
+}
+```
+
+<br/>
+
+
+
+Subscriber 는 Subscriber::onSubscribe(Subscrition) 을 통해서 Publisher 가 수락한 Subscription 객체를 수신합니다. <br/>
+
+[Subscriber.java](https://github.com/reactive-streams/reactive-streams-jvm/blob/master/api/src/main/java/org/reactivestreams/Subscriber.java) 의 코드는 아래와 같습니다.<br/>
+
+```java
+package org.reactivestreams;
+public interface Subscriber<T> {
+    public void onSubscribe(Subscription s);
+    public void onNext(T t);
+    public void onError(Throwable t);
+    public void onComplete();
+}
+```
+
+Subscriber 객체는 onNext(T) 를 통해서 계속해서 구독하고 있는 이벤트를 수신합니다. 그리고 onError(Throwable) 과 onComplete() 는 최종적으로 단 한번 호출되는데, 예외가 발생했을 경우에는 onError(Throwable) 을 통해 종료가 되고, 정상적으로 종료될 때에는 onComplete() 를 통해서 종료됩니다.<br/>
+
+<br/>
+
+
+
+Subscription 객체는 Subscriber 가 Publisher 에게 자신을 subscribe(Subscriber) 할 때 Publisher 가 생성하는 객체이며, 이 것을 Subscriber의 onSubscribe(Subscription) 의 인자값으로 전달해주는 객체입니다.<br/>
+
+[Subscription.java](https://github.com/reactive-streams/reactive-streams-jvm/blob/master/api/src/main/java/org/reactivestreams/Subscription.java) 의 코드는 아래와 같습니다.
+
+```java
+package org.reactivestreams;
+public interface Subscription {
+    public void request(long n);
+    public void cancel();
+}
+```
+
+request 함수는 backpressure 를 조절하는 데에 사용됩니다. 그리고 cancel 은 onNext() 작업을 중단(취소)할수 있도록 Subscrition 객체를 이용해서 이벤트의 흐름을 취소할 때 사용되는 메서드입니다.<br/>
+
+<br/>
+
+
 
 ## Hot Publisher, Cold Publisher
 
+Hot Publisher 는 subscriber 가 없는 상태에서도 데이터를 생성해서 stream 에 이벤트를 push 하는 것을 의미합니다. 모든 subscriber 들에게 같은 데이터를 전달합니다. 예를 들면 facebook 의 타임라인이 다른 사람들에게도 전파되는 것과 같은 현상을 예로 들 수 있습니다.<br/>
 
-
-## 예제 1. 숫자 구독 프로그램
-
-### FixedIntPublisher
-
-### IntSubscription
-
-### RequestNSubscriber
+Cold Publisher 는 subscribe 를 하는 순간부터 stream 이벤트가 시작되는 것을 의미합니다. subscriber 에 맞춰서 데이터 스트림을 제공하는 것이 가능합니다. 예를 들면 API 요청 처리, 파일 읽기 작업을 예로 들 수 있습니다.<br/>
 
 
 
-## 예제 2. 
+
+
+## e.g.
 
 
 
