@@ -122,7 +122,7 @@ isOpen
 close
 
 - close() : WebSocket 을 NORMAL 상태로 닫을 때 사용하는 메서드입니다.
-- close(CloseStatus satus);
+- close(CloseStatus satus) :
   - WebSocket 을 전달받은 status 를 지정해서 닫는 용도의 메서드입니다.
 
 
@@ -171,7 +171,7 @@ binaryMessage(Function\<DataBufferFactory, DataBuffer\>)
 
 - 인자값으로 전달받은 Function 을 통해서 변환된 DataBuffer 를 WebSocketMessage 로 변경해줍니다.
 
-pingMessage(Function\<DataBufferFactory, DataBuffer\>), pongMessage(Function<DataBufferFactory, DataBuffer>)
+pingMessage(Function\<DataBufferFactory, DataBuffer\>), pongMessage(Function\<DataBufferFactory, DataBuffer\>)
 
 - 인자값으로 전달받은 Function 을 통해서 변환된 DataBuffer 를 WebSocketMessage 로 변환해줍니다.
 - 흔히 알려진 PING/PONG 메시지 교환입니다. 서버 또는 클라이언트가 pingMessage 를 전달하면 반대쪽에서는 pongMessage를 반환해야 합니다.
@@ -293,15 +293,15 @@ public final class CloseStatus implements Serializable {
 
 - 1000 : NORMAL
   - 정상종료를 의미합니다.
-- 1001 : GOING\_AWAY
+- 1001 : `GOING_AWAY`
   - 서버가 예상치 못하게 종료되거나 페이지에서 벗어난 경우를 의미합니다.
-- 1002 : PROTOCOL\_ERROR
+- 1002 : `PROTOCOL_ERROR`
   - 프로토콜에 문제를 의미하니다.
-- 1003 : NOT\_ACCEPTABLE
+- 1003 : `NOT_ACCEPTABLE`
   - ACCEPT 불가능한 데이터를 요청으로 받았을 때 보
-- 1011 : SERVER\_ERROR
+- 1011 : `SERVER_ERROR`
   - 예상하지 못한 에러. 서버에서 요청을 처리하지 못하는 경우
-- 1012 : SERVICE\_RESTARTED
+- 1012 : `SERVICE_RESTARTED`
   - 서비스가 재시작됨을 의미
   - 이 때 클라이언트는 5\~30 초 내에 랜덤하게 접근합니다.
 
