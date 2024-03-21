@@ -14,9 +14,38 @@ Websocket 프로토콜은 Application, Presentation, Session, Transport 계층�
 
 
 
-## Request, Response 
+## Websocket Connection 획득 과정
 
-request → HTTP upgrade 응답 수신 → 양방향 메시지 커넥션 수립
+![](./img/what-is-websocket/websocket-handshake.png)
+
+<br/>
+
+
+
+**웹소켓 엔드포인트에 요청**
+
+```plain
+GET ws://localhost:8080/chat
+```
+
+<br/>
+
+
+
+**웹소켓 커넥션 응답, 요청 수립**<br/>
+
+정상적인 요청일 경우 서버로부터 아래와 같이 응답이 옵니다.
+
+```plain
+Handshake status: 101 (Switching Protocols) 
+upgrade: websocket 
+connection: upgrade
+```
+
+서버에서 요청을 수립했을 때 응답으로 아래와 같이 **upgrade** 헤더가 내려온다는 것을 기억하시기 바랍니다.
+
+- upgrade: websocket
+- connection: upgrade
 
 <br/>
 
@@ -24,11 +53,192 @@ request → HTTP upgrade 응답 수신 → 양방향 메시지 커넥션 수립
 
 ## HandlerMapping, HandlerAdapter, SimpleUrlHandlerMapping
 
+Websocket Request 매핑 시 HandlerAdapter와 HandlerAdapter 는 무엇을 사용하는지, HandlerMapping 은 어떤 것이 사용되는지, 실제 매핑되는 WebsocketHandler는 무엇인지를 그림으로 그려보면 아래와 같습니다. 아래 그림에서 검은색 배경과 노란 글씨로 표현한 부분들이 Websocket 요청/응답을위한 HandlerMappingAdapter, HandlerMapping, Handler 들 입니다.<br/>
+
+![](./img/what-is-websocket/handler-handler-mapping-handler-adapter.png)
+
 <br/>
 
 
 
-## WebsocketHandler, WebsocketSession
+[SimpleUrlHandlerMapping](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/servlet/handler/SimpleUrlHandlerMapping.html), [SimpeUrlHandlerMapping(code)](https://github.com/spring-projects/spring-framework/blob/main/spring-webmvc/src/main/java/org/springframework/web/servlet/handler/SimpleUrlHandlerMapping.java)
+
+
+
+## WebSocketSession
+
+[WebSocketSession](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/socket/WebSocketSession.html) , [WebSocketSession(code)](https://github.com/spring-projects/spring-framework/blob/main/spring-webflux/src/main/java/org/springframework/web/reactive/socket/WebSocketSession.java)
+
+```java
+package org.springframework.web.reactive.socket;
+
+// ...
+
+public interface WebSocketSession {
+	String getId();
+	HandshakeInfo getHandshakeInfo();
+	DataBufferFactory bufferFactory();
+	Map<String, Object> getAttributes();
+	Flux<WebSocketMessage> receive();
+	Mono<Void> send(Publisher<WebSocketMessage> messages);
+
+	boolean isOpen();
+
+	default Mono<Void> close() {
+		return close(CloseStatus.NORMAL);
+	}
+
+	Mono<Void> close(CloseStatus status);
+	Mono<CloseStatus> closeStatus();
+	WebSocketMessage textMessage(String payload);
+	WebSocketMessage binaryMessage(Function<DataBufferFactory, DataBuffer> payloadFactory);
+	WebSocketMessage pingMessage(Function<DataBufferFactory, DataBuffer> payloadFactory);
+	WebSocketMessage pongMessage(Function<DataBufferFactory, DataBuffer> payloadFactory);
+}
+```
+
+<br/>
+
+bufferFactory
+
+- DataBufferFactory 로 변환 후 DataBuffer 로 변환할 수 있도록 제공되는 필드
+
+getAttributes
+
+- attribute 들을 얻어오는 메서드
+
+receive
+
+- 클라이언트로부터 Flux 타입으로 WebSocketMessage 를 받는 메서드입니다.
+
+send
+
+- WebSocketMessagePublisher 를 이용해서 WebSocketMessage를 전달할 때 사용하는 메서드입니다.
+
+isOpen
+
+- WebSocketSession 이 열려있는지 체크합니다.
+
+close
+
+- close() : WebSocket 을 NORMAL 상태로 닫을 때 사용하는 메서드입니다.
+- close(CloseStatus satus);
+  - WebSocket 을 전달받은 status 를 지정해서 닫는 용도의 메서드입니다.
+
+
+
+### WebSocketSession 내의 factory 메서드
+
+[AbstractWebSocketSession](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/socket/adapter/AbstractWebSocketSession.html) , [AbstractWebSocketSession.java (code)](https://github.com/spring-projects/spring-framework/blob/main/spring-webflux/src/main/java/org/springframework/web/reactive/socket/adapter/AbstractWebSocketSession.java) <br/>
+
+```java
+public abstract class AbstractWebSocketSession<T> implements WebSocketSession {
+    // ...
+	@Override
+	public WebSocketMessage textMessage(String payload) {
+		byte[] bytes = payload.getBytes(StandardCharsets.UTF_8);
+		DataBuffer buffer = bufferFactory().wrap(bytes);
+		return new WebSocketMessage(WebSocketMessage.Type.TEXT, buffer);
+	}
+
+	@Override
+	public WebSocketMessage binaryMessage(Function<DataBufferFactory, DataBuffer> payloadFactory) {
+		DataBuffer payload = payloadFactory.apply(bufferFactory());
+		return new WebSocketMessage(WebSocketMessage.Type.BINARY, payload);
+	}
+
+	@Override
+	public WebSocketMessage pingMessage(Function<DataBufferFactory, DataBuffer> payloadFactory) {
+		DataBuffer payload = payloadFactory.apply(bufferFactory());
+		return new WebSocketMessage(WebSocketMessage.Type.PING, payload);
+	}
+
+	@Override
+	public WebSocketMessage pongMessage(Function<DataBufferFactory, DataBuffer> payloadFactory) {
+		DataBuffer payload = payloadFactory.apply(bufferFactory());
+		return new WebSocketMessage(WebSocketMessage.Type.PONG, payload);
+	}
+}
+```
+
+
+
+textMessage(String payload)
+
+- 주어진 payload 를 bufferFactory 를 이용해서 WebSocketMessage 로 변환합니다.
+
+binaryMessage(Function\<DataBufferFactory, DataBuffer\>)
+
+- 인자값으로 전달받은 Function 을 통해서 변환된 DataBuffer 를 WebSocketMessage 로 변경해줍니다.
+
+pingMessage(Function\<DataBufferFactory, DataBuffer\>), pongMessage(Function<DataBufferFactory, DataBuffer>)
+
+- 인자값으로 전달받은 Function 을 통해서 변환된 DataBuffer 를 WebSocketMessage 로 변환해줍니다.
+- 흔히 알려진 PING/PONG 메시지 교환입니다. 서버 또는 클라이언트가 pingMessage 를 전달하면 반대쪽에서는 pongMessage를 반환해야 합니다.
+
+<br/>
+
+
+
+## WebSocketMessage
+
+[WebSocketMessage](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/socket/WebSocketMessage.html), [WebSocketMessage.java (code)](https://github.com/spring-projects/spring-framework/blob/main/spring-webflux/src/main/java/org/springframework/web/reactive/socket/WebSocketMessage.java)
+
+```java
+package org.springframework.web.reactive.socket;
+
+// ...
+
+public class WebSocketMessage {
+
+	private static final boolean reactorNetty2Present = ClassUtils.isPresent(
+			"io.netty5.handler.codec.http.websocketx.WebSocketFrame", WebSocketMessage.class.getClassLoader());
+
+	private final Type type;
+	private final DataBuffer payload;
+	
+    // ...
+    
+    public String getPayloadAsText() {
+		return getPayloadAsText(StandardCharsets.UTF_8);
+	}
+
+	public String getPayloadAsText(Charset charset) {
+		return this.payload.toString(charset);
+	}
+    
+	/**
+	 * WebSocket message types.
+	 */
+	public enum Type {
+		/**
+		 * Text WebSocket message.
+		 */
+		TEXT,
+		/**
+		 * Binary WebSocket message.
+		 */
+		BINARY,
+		/**
+		 * WebSocket ping.
+		 */
+		PING,
+		/**
+		 * WebSocket pong.
+		 */
+		PONG
+	}
+    
+    // ...
+
+}
+```
+
+<br/>
+
+- type : WebSocketMessage 내에 정의된 enum 인 `Type` 을 의미하며, TEXT, BINARY, PING, PONG 이 있습니다.
+- payload : socketMassage 에 담긴 payload 입니다.
+- getPayloadAsText : payload 를 String 형태로 변환해줍니다.
 
 <br/>
 
@@ -36,7 +246,66 @@ request → HTTP upgrade 응답 수신 → 양방향 메시지 커넥션 수립
 
 ## CloseStatus
 
+[CloseStatus](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/socket/CloseStatus.html) , [CloseStatus (code)](https://github.com/spring-projects/spring-framework/blob/main/spring-websocket/src/main/java/org/springframework/web/socket/CloseStatus.java)<br/>
 
+```java
+package org.springframework.web.socket;
+// ...
+public final class CloseStatus implements Serializable {
+	private static final long serialVersionUID = 5199057709285570947L;
+	public static final CloseStatus NORMAL = new CloseStatus(1000);
+	public static final CloseStatus GOING_AWAY = new CloseStatus(1001);
+	public static final CloseStatus PROTOCOL_ERROR = new CloseStatus(1002);
+	public static final CloseStatus NOT_ACCEPTABLE = new CloseStatus(1003);
+	// 10004: Reserved.
+	// The specific meaning might be defined in the future.
+	public static final CloseStatus NO_STATUS_CODE = new CloseStatus(1005);
+	public static final CloseStatus NO_CLOSE_FRAME = new CloseStatus(1006);
+	public static final CloseStatus BAD_DATA = new CloseStatus(1007);
+	public static final CloseStatus POLICY_VIOLATION = new CloseStatus(1008);
+	public static final CloseStatus TOO_BIG_TO_PROCESS = new CloseStatus(1009);
+	public static final CloseStatus REQUIRED_EXTENSION = new CloseStatus(1010);
+	public static final CloseStatus SERVER_ERROR = new CloseStatus(1011);
+	public static final CloseStatus SERVICE_RESTARTED = new CloseStatus(1012);
+	public static final CloseStatus SERVICE_OVERLOAD = new CloseStatus(1013);
+	public static final CloseStatus TLS_HANDSHAKE_FAILURE = new CloseStatus(1015);
+	public static final CloseStatus SESSION_NOT_RELIABLE =
+			new CloseStatus(4500).withReason("Failed to send message within the configured send limit");
+	private final int code;
+
+	@Nullable
+	private final String reason;
+
+
+	public CloseStatus(int code) {
+		this(code, null);
+	}
+    
+    // ...
+}
+```
+
+<br/>
+
+
+
+이 중 주요 필드를 요약해보면 아래와 같습니다. 아래 필드 외의 다른 필드들은 [CloseStatus (code)](https://github.com/spring-projects/spring-framework/blob/main/spring-websocket/src/main/java/org/springframework/web/socket/CloseStatus.java) 내의 주석을 참고해주시기 바랍니다.
+
+- 1000 : NORMAL
+  - 정상종료를 의미합니다.
+- 1001 : GOING\_AWAY
+  - 서버가 예상치 못하게 종료되거나 페이지에서 벗어난 경우를 의미합니다.
+- 1002 : PROTOCOL\_ERROR
+  - 프로토콜에 문제를 의미하니다.
+- 1003 : NOT\_ACCEPTABLE
+  - ACCEPT 불가능한 데이터를 요청으로 받았을 때 보
+- 1011 : SERVER\_ERROR
+  - 예상하지 못한 에러. 서버에서 요청을 처리하지 못하는 경우
+- 1012 : SERVICE\_RESTARTED
+  - 서비스가 재시작됨을 의미
+  - 이 때 클라이언트는 5\~30 초 내에 랜덤하게 접근합니다.
+
+<br/>
 
 
 
