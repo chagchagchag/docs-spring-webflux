@@ -3,6 +3,8 @@
 ## 참고자료
 
 - [Using Server Sent events (MDN)](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events)
+- [HandlerResultHandler](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/reactive/HandlerResultHandler.html), [ResponseBodyResultHandler](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/reactive/result/method/annotation/ResponseBodyResultHandler.html), [ResponseEntityResultHandler](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/reactive/result/method/annotation/ResponseEntityResultHandler.html), [ViewResolutionResultHandler](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/reactive/result/view/ViewResolutionResultHandler.html), [ServerResponseResultHandler](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/reactive/function/server/support/ServerResponseResultHandler.html) 
+- [ServerSentEventHttpMessageWriter](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/codec/ServerSentEventHttpMessageWriter.html)
 
 <br/>
 
@@ -127,13 +129,85 @@ comment
 
 ## Spring 내에서의 상호작용
 
-RequestMapping → HandlerMapping → HandlerMappingAdapter → ResultHandler(ResponseBodyResultHandler) 
+### DispatcherHandler 의 요청 처리
+
+일반적으로 잘 알려진 RequestMapping → HandlerMapping → HandlerMappingAdapter → ResultHandler(ResponseBodyResultHandler)의 순서를 따릅니다.
+
+![](./img/what-is-sse/server-sent-event-flow.png)
+
+ServerWebExchange
+
+- request 는 ServerWebExchange 타입으로 변환됩니다.
+
+DispatcherHandler
+
+- 요청의 내용들을 기반으로 알맞은 HandlerMapping을 찾습니다
+
+HandlerMapping
+
+- DispatcherHandler 는 HandlerAdapter 를 이용해서 방금 찾은 HandlerMapping을 HandlerAdapter에 함께 넘겨 주어서 적절한 Controller 나 Functional Endpoint 를 찾습니다.
+
+HandlerAdapter
+
+- Controller 등에서 처리한 애플리케이션의 `Flux<ServerSentEvent` 같은 처리 결과는 `HandlerResult` 라는 타입 안에 담아서 HandlerResult를 `HandlerResultHandler` 에 전달해줍니다.
+
+HandlerResultHandler
+
+- byteBuffer 단위의 네트워킹 연산을 수행합니다.
+- [HandlerResultHandler](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/reactive/HandlerResultHandler.html) 는 interface 이며, 구체 타입으로는 아래와 같이 [ResponseBodyResultHandler](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/reactive/result/method/annotation/ResponseBodyResultHandler.html), [ResponseEntityResultHandler](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/reactive/result/method/annotation/ResponseEntityResultHandler.html), [ViewResolutionResultHandler](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/reactive/result/view/ViewResolutionResultHandler.html), [ServerResponseResultHandler](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/reactive/function/server/support/ServerResponseResultHandler.html) 등과 같이 여러 종류가 있습니다.
+- 만약 SSE 가 @ResponseBody 를 리턴할 경우 [ResponseBodyResultHandler](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/reactive/result/method/annotation/ResponseBodyResultHandler.html)를 따르게 됩니다.
+
+ <br/>
+
+
+
+![](./img/what-is-sse/handler-result-handler-impl.png)
+
+<br/>
+
+
+
+### HandlerResultHandler 가 ResponseBody 를 처리하는 과정
+
+> 내부 동작에 대한 설명입니다. 다소 필요없어보일 수도 있겠지만, 내부 동작을 보면서 원리를 파악하는 것도 좋겠다는 생각이 들어서 정리합니다.<br/>
+
+위에서는 DispatcherHandler 에서 HandlerResultHandler 타입까지 어떻게 요청이 분류되는지를 살펴봤습니다. 이번에는 HandlerResultHandler 가 ServerSocketEvent 를 ResponseBody 로 처리하려 할 때 어떻게 내부 동작이 이뤄지는지를 살펴봅니다.
+
+![](./img/what-is-sse/handler-result-handler-wirte-flow.png)
+
+<br/>
+
+**ResponseBodyResultHandler::handleResult(...) → AbstractMessageWriterResultHandler::writeBody(...)**<br/>
+
+- ResponseBodyResultHandler 내에서 handleResult 의 요청을 처리한 후 제일 마지막으로 writeBody(...) 메서드를 호출하는데 이것은 AbstractMessageWriterResultHandler 내부의 writeBody(...)를 호출하게 됩니다.<br/>
+
+**AbstractMessageWriterResultHandler::writeBody(...) → HttpMessageWriter::write(Publisher)**<br/>
+
+- writeBody() 메서드에서는 요청에 맞는 HttpMessageWriter 에 대한 구체타입을 for loop 을 순회하면서 찾고, 요청에 맞는 writer 를 찾았다면, 그 구체타입에 대한 HttpMessageWriter 객체의 write(Publisher) 메서드를 실행합니다.<br/>
+
+<br/>
+
+
+
+그리고 HttpMessageWriter 타입의 객체 들 중 SSE 를 처리하는 타입은 [ServerSentEventHttpMessageWriter](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/http/codec/ServerSentEventHttpMessageWriter.html) 입니다.<br/>
+
+그리고 내부 구현중 일부를 보면 아래와 같이 `WRITABLE_MEDIA_TYPES` 에 `TEXT_EVENT_STREAM` 이 지정되어 있고, `DEFAULT_MEDIA_TYPE` 은 text, event-stream 이라는 것을 확인 가능합니다.<br/>
+
+![](./img/what-is-sse/server-sent-event-http-message-writer.png)
+
+<br/>
+
+
+
+그리고 실제 write 연산은 아래와 같이 ByteBufferFactory 를 이용해서 물리적인 전송 연산을 수행하고 있습니다.
+
+![](./img/what-is-sse/write.png)
+
+<br/>
 
 
 
 ## e.g.
-
-
 
 
 
