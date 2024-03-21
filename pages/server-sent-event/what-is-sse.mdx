@@ -150,6 +150,7 @@ HandlerMapping
 HandlerAdapter
 
 - Controller 등에서 처리한 애플리케이션의 `Flux<ServerSentEvent` 같은 처리 결과는 `HandlerResult` 라는 타입 안에 담아서 HandlerResult를 `HandlerResultHandler` 에 전달해줍니다.
+- HandlerResult 는 Flux\<ServerSentEvent\> 와 같은 애플리케이션의 응답 데이터인 retureValue를 바인딩하고 있습니다.
 
 HandlerResultHandler
 
@@ -199,7 +200,7 @@ HandlerResultHandler
 
 
 
-그리고 실제 write 연산은 아래와 같이 ByteBufferFactory 를 이용해서 물리적인 전송 연산을 수행하고 있습니다.
+그리고 실제 write 연산은 아래와 같이 DataBufferFactory 를 이용해서 물리적인 전송 연산을 수행하고 있습니다.
 
 ![](./img/what-is-sse/write.png)
 
@@ -207,7 +208,244 @@ HandlerResultHandler
 
 
 
-## e.g.
+## 구현
+
+### Controller #1
+
+SSE 를 전송하는 서버 애플리케이션의 Controller 는 예를 들면 아래와 같은 모습입니다.
+
+```java
+package io.chagchagchag.example.foobar.sse.application;
+
+import java.time.Duration;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import reactor.core.publisher.Flux;
+
+@Controller
+public class VoteController {
+  @ResponseBody
+  @GetMapping(path = "/vote", produces = "text/event-stream")
+  public Flux<String> getVote(){
+    return Flux
+        .interval(Duration.ofMillis(100))
+        .map(ms -> "고영희 " + ms);
+  }
+}
+```
+
+<br/>
+
+SSE 를 사용하기 위해서는 @GetMapping 내에 반드시 `produces = "text/event-stream"` 을 꼭 명시해줘야 합니다.<br/>
+
+이렇게 해줘야 위에서 살펴봤던 MessageWriter 를 찾는 과정에서 `produces = "text/event-stream"` 을 보고 `writer.canWrite()` 메서드를 통해서 ServerSentEventHttpMessageWriter를 찾을 수 있습니다.<br/>
+
+이 text/event-stream 은 Spring 에서 제공하는 `MediaType.TEXT_EVENT_STREAM_VALUE` 타입을 사용해서 대체 가능합니다.<br/>
+
+<br/>
+
+위의 예제는 단순 문자열을 전송하고 있기 때문에 결과값으로는 data 필드에 문자열만 채워지고 나머지 필드들은 `type: message`, `id:`, `data: 고영희 1` 과 같은 형태로 데이터가 클라이언트에 전송됩니다.
+
+<br/>
+
+
+
+### 구독
+
+http 클라이언트를 통해서 구독을 해봅니다.
+
+```http
+GET http://localhost:8080/vote
+```
+
+<br/>
+
+
+
+출력결과는 아래와 같이 나타납니다.
+
+```plain
+data:고영희 0
+
+data:고영희 1
+
+data:고영희 2
+
+data:고영희 3
+
+data:고영희 4
+
+data:고영희 5
+
+data:고영희 6
+
+data:고영희 7
+
+data:고영희 8
+
+data:고영희 9
+
+data:고영희 10
+
+data:고영희 11
+
+data:고영희 12
+
+data:고영희 13
+
+data:고영희 14
+
+data:고영희 15
+
+data:고영희 16
+
+data:고영희 17
+
+data:고영희 18
+
+data:고영희 19
+
+data:고영희 20
+.. 
+```
+
+<br/>
+
+
+
+### Controller #2
+
+이번에는 조금 더 복잡하게 보내보고, 구독은  javascript 로 구독요청을 해봅니다.<br/>
+
+먼저 controller 예제입니다.
+
+```java
+package io.chagchagchag.example.foobar.sse.application;
+
+import java.time.Duration;
+import org.springframework.http.MediaType;
+import org.springframework.http.codec.ServerSentEvent;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.ResponseBody;
+import reactor.core.publisher.Flux;
+
+@Controller
+public class VoteController {
+  // ... 
+  
+  @ResponseBody
+  @GetMapping(path = "/vote2", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+  public Flux<ServerSentEvent<String>> getVote2(
+      @RequestHeader(name = "Last-Event-ID", required = false, defaultValue = "0") Long lastEventId
+  ){
+    return Flux
+        .range(0, 10)
+        .delayElements(Duration.ofMillis(10))
+        .map(
+            i -> ServerSentEvent.<String>builder()
+                .event("vote")
+                .id(String.valueOf(i + lastEventId + 1))
+                .data("data-"+i)
+                .comment("comment-"+i)
+                .build()
+        );
+  }
+}
+```
+
+<br/>
+
+
+
+아까와는 다르게 ServerSentEvent 의 데이터 형식을 맞추어서 Response 를 하고 있습니다.
+
+<br/>
+
+
+
+### CorsConfig
+
+랜덤한 javascript 포트에서 요청을 할 것이기에 아래의 코드를 추가해주었습니다.
+
+```java
+package io.chagchagchag.example.foobar.sse.config;
+
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.config.CorsRegistry;
+import org.springframework.web.reactive.config.WebFluxConfigurer;
+
+@Configuration
+public class CorsConfig implements WebFluxConfigurer {
+
+  @Override
+  public void addCorsMappings(CorsRegistry registry) {
+    registry
+        .addMapping("/**")
+        .allowedOriginPatterns("*")
+        .allowedMethods("*");
+  }
+}
+
+```
+
+<br/>
+
+
+
+### 구독
+
+이번에는 구독하는 측의 코드입니다.
+
+vote.html
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Vote</title>
+</head>
+<body>
+  <script type="text/javascript" src="vote.js"/>
+</body>
+</html>
+```
+
+<br/>
+
+
+
+vote.js
+
+```javascript
+window.onload = function(){
+  const eventSource = new EventSource('http://localhost:8080/vote2');
+
+  eventSource.onopen = event => {
+    console.log('opened');
+  }
+
+  eventSource.addEventListener('vote', event => {
+    const type = event.type;
+    const id = event.lastEventId;
+    const data = event.data;
+    console.log(`type: ${type}, id: ${id}, data: ${data}`);
+  });
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+vote.html 파일을 브라우저에서 열어서 개발자 도구를 열어서 확인하면, 출력결과가 아래와 같이 나타나는 것을 확인 가능합니다. html 파일은 intellij 내장 기능을 통해 크롬에서 구동했습니다. 랜덤 포트에서 구동되기에 서버측 컨트롤러에 위에서 작성한 CorsConfig 설정을 꼭 해줘야 아래의 결과가 나타납니다.<br/>
+
+![](./img/what-is-sse/output-sse.png)
 
 
 
