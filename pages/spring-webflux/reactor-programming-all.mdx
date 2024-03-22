@@ -1123,6 +1123,135 @@ Process finished with exit code 0
 
 ## delayElements()
 
+onNext 이벤트 발행 시에 최소 delay 만큼의 간격을 두어서 delay 를 수행합니다. 만약 onNext 이벤트가 발행된 후에 delay 보다 더 늦게 다음 onNext 이벤트가 전달되면 바로 전파됩니다.
+
+![](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/doc-files/marbles/flux.svg)
+
+<br/>
+
+
+
+### e.g 1
+
+for 문 안에서는 10ms 만큼 지연이 발생하고, delayElements 에서는 최소 500ms 만큼 기다려주고 있습니다.
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.delay_elements;
+
+import java.time.Duration;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
+
+@Slf4j
+public class DelayElementsExample1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    Flux.create(fluxSink -> {
+      for(int i=1; i<=5; i++){
+        try{
+          Thread.sleep(10);
+        }
+        catch (InterruptedException e){
+          e.printStackTrace();
+          throw new IllegalStateException(e);
+        }
+        fluxSink.next(i);
+      }
+      fluxSink.complete();
+    })
+    .delayElements(Duration.ofMillis(500))
+    .doOnNext(v -> {
+      log.info("doOnNext = " + v);
+    })
+    .subscribeOn(Schedulers.single())
+    .subscribe();
+
+    Thread.sleep(5000);
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+20:44:50.730 [parallel-1] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample1 -- doOnNext = 1
+20:44:51.240 [parallel-2] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample1 -- doOnNext = 2
+20:44:51.756 [parallel-3] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample1 -- doOnNext = 3
+20:44:52.269 [parallel-4] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample1 -- doOnNext = 4
+20:44:52.782 [parallel-5] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample1 -- doOnNext = 5
+
+Process finished with exit code 0
+
+```
+
+로그에 찍힌 시간을 보면 500ms 마다 한번씩 `doOnNext=` 로그가 찍혔음을 확인 가능합니다.<br/>
+
+<br/>
+
+
+
+### e.g 2
+
+이번에는 for 문안에서 1000ms 를 지정합니다. delayElements 에서는 100ms 를 지정했습니다. 결과는 delayElements 의 100ms 는 최소로 기다려야 하는 시간이기에 for loop 의 1000ms 를 거친 후, delayElements 는 어이쿠 최소로 기다려야 하는 시간(100ms)이 넘어버렸네? 하면서 delayElements 는 넘어가게 됩니다.
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.delay_elements;
+
+import java.time.Duration;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.scheduler.Schedulers;
+
+@Slf4j
+public class DelayElementsExample2 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    Flux.create(fluxSink -> {
+          for(int i=1; i<=5; i++){
+            try{
+              Thread.sleep(1000);
+            }
+            catch (InterruptedException e){
+              e.printStackTrace();
+              throw new IllegalStateException(e);
+            }
+            fluxSink.next(i);
+          }
+          fluxSink.complete();
+        })
+        .delayElements(Duration.ofMillis(700))
+        .doOnNext(v -> {
+          log.info("doOnNext = " + v);
+        })
+        .subscribeOn(Schedulers.single())
+        .subscribe();
+
+    Thread.sleep(7000);
+  }
+}
+```
+
+<br/>
+
+출력결과
+
+```plain
+20:50:17.131 [parallel-1] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample2 -- doOnNext = 1
+20:50:18.142 [parallel-2] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample2 -- doOnNext = 2
+20:50:19.145 [parallel-3] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample2 -- doOnNext = 3
+20:50:20.155 [parallel-4] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample2 -- doOnNext = 4
+20:50:21.154 [parallel-5] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample2 -- doOnNext = 5
+
+Process finished with exit code 0
+```
+
 <br/>
 
 
