@@ -311,3 +311,299 @@ public final class CloseStatus implements Serializable {
 
 ## e.g.
 
+먼저 코드부터 남기고 이 글의 하단부에 각 컴포넌트 등의 코드에 대한 설명을 남기도록 하겠습니다.<br/>
+
+
+
+### 예제 시나리오
+
+사용자 `a` 가 아래와 같이 접속
+
+```http
+WEBSOCKET ws://localhost:8080/chatting
+X-USER-NAME: a
+```
+
+<br/>
+
+
+
+사용자 `b` 가 아래와 같이 접속
+
+```http
+WEBSOCKET ws://localhost:8080/chatting
+X-USER-NAME: b
+```
+
+<br/>
+
+
+
+사용자 a의 채팅 진행
+
+- 메시지 앞에 `b:` 를 붙여서 메시지를 보냅니다.
+- `[받을 사람]:` 과 같은 형식입니다. 
+
+```plain
+Handshake status: 101 (Switching Protocols)
+set-cookie: SESSION=7873bcfa-fe61-40d9-8ce0-8a233c50883a; Path=/; HTTPOnly; SameSite=Lax
+upgrade: websocket
+connection: upgrade
+sec-websocket-accept: 7Xs+mSGpH81i7eaY84W8Bd4QHsI=
+
+(System): a님이 채팅방에 입장하셨습니다.
+b: 안녕하세요 b님
+
+b: 안녕하세요 a님
+b: 잘지내시나요
+
+b: 네 잘 지내고 있어요
+b: 그렇군요
+
+b: 아주 좋습니다.
+
+
+Connection closed
+```
+
+<br/>
+
+
+
+사용자 b 의 채팅 진행
+
+- 메시지 앞에 `b:` 를 붙여서 메시지를 보냅니다.
+- `[받을 사람]:` 과 같은 형식입니다.
+
+```plain
+WEBSOCKET ws://localhost:8080/chatting
+
+Handshake status: 101 (Switching Protocols)
+set-cookie: SESSION=95629724-a649-4efe-934d-90c8db45a28d; Path=/; HTTPOnly; SameSite=Lax
+upgrade: websocket
+connection: upgrade
+sec-websocket-accept: IEz5SEgtKBJFMsmO1znelHu3ia4=
+
+(System): b님이 채팅방에 입장하셨습니다.
+a: 안녕하세요 b님
+b: 안녕하세요 a님
+
+b: 안녕하세요 a님
+b: 안녕하세요 a님
+
+b: 안녕하세요 a님
+a: 안녕하세요 a님
+
+a: 잘지내시나요
+a: 네 잘 지내고 있어요
+
+a: 그렇군요
+a: 아주 좋습니다.
+
+
+Connection closed
+```
+
+<br/>
+
+
+
+### WebSocketConfig
+
+먼저 WebsocketConfig 예제입니다.<br/>
+
+WebSocketHandlerAdapter 를 Bean 으로 등록합니다. 이 WebSocketHandlerAdapter 는 CustomWebSocketService 를 내부에 바인딩하고 있습니다. CustomWebSocketService 는  [HandshakeWebSocketService](https://docs.spring.io/spring-framework/docs/5.1.7.RELEASE_to_5.1.8.RELEASE/Spring%20Framework%205.1.8.RELEASE/org/springframework/web/reactive/socket/server/support/HandshakeWebSocketService.html) 를 extends 한 사용자 정의 클래스입니다.<br/>
+
+위에서 이미 설명했듯 HandlerAdapter 는 HandlerMapping 을 찾은 후 찾은 HandlerMapping 을 어떻게 처리해야 할지를 정의해야 하는데, 이번 WebSocketHandlerAdapter 예제는 찾아낸 매핑에 맞는 CustomHandshakeWebsocketService (HandshakeWebSocketService) 타입을 연결해주고 있습니다.<br/>
+
+찾아낸 HandlerMapping은 미리 정의해둔 빈인데, 여기에 대해서는 이 글을 계속 읽다보면 정리한 내용이 나옵니다.<br/>
+
+```java
+package io.chagchagchag.example.foobar.websocket.config;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.socket.server.support.HandshakeWebSocketService;
+import org.springframework.web.reactive.socket.server.support.WebSocketHandlerAdapter;
+
+@Configuration
+public class WebsocketConfig {
+
+  @Bean
+  public WebSocketHandlerAdapter webSocketHandlerAdapter(
+      HandshakeWebSocketService customHandshakeWebsocketService
+  ){
+    // websocket 에서 attribute 를 바이패스
+    customHandshakeWebsocketService.setSessionAttributePredicate(s -> true);
+    return new WebSocketHandlerAdapter(customHandshakeWebsocketService);
+  }
+
+}
+```
+
+<br/>
+
+
+
+#### CustomHandshakeWebSocketService
+
+직접 정의한 CustomHandshakeWebSocketService 는 아래와 같습니다.<br/>
+
+아래 코드는 단순히 헤더의 파라미터를 웹소켓 세션에 바인딩해주는 역할을 합니다. <br/>
+
+사용자의 `WEBSOCKET ws://localhost:8080/chatting` 요청시에 헤더에 `X-USER-NAME` 이 있을 경우 이 `X-USER-NAME` 에 대한 값을 얻어온 후 세션에 `user-name: X-USER-NAME 값` 으로 바인딩해주는 역할을 합니다.
+
+```java
+package io.chagchagchag.example.foobar.websocket.config;
+
+import java.util.Optional;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.socket.WebSocketHandler;
+import org.springframework.web.reactive.socket.server.support.HandshakeWebSocketService;
+import org.springframework.web.server.ServerWebExchange;
+import reactor.core.publisher.Mono;
+
+@Component
+public class CustomHandshakeWebsocketService extends HandshakeWebSocketService {
+
+  @Override
+  public Mono<Void> handleRequest(ServerWebExchange exchange, WebSocketHandler handler) {
+    String userName = exchange
+        .getRequest()
+        .getHeaders()
+        .getFirst("X-USER-NAME");
+
+    return Optional.ofNullable(userName)
+        .map(_userName -> {
+          return exchange.getSession()
+              .flatMap(webSession -> {
+                webSession.getAttributes().put("user-name", _userName);
+                return super.handleRequest(exchange, handler);
+              });
+        })
+        .orElseGet(() -> {
+          exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
+          return exchange.getResponse().setComplete();
+        });
+  }
+}
+```
+
+<br/>
+
+
+
+### MappingConfig
+
+[SimpleUrlHandlerMapping](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/web/servlet/handler/SimpleUrlHandlerMapping.html) 빈을 생성해서 등록하는 역할을 합니다.<br/>
+
+등록 시에 `/chatting` 에 대해 WebSocketHandler 인스턴스를 매핑해둔 Map 을 SimpleUrlHandlerMapping 의 urlMap 으로 등록해줍니다.<br/>
+
+- `/chatting` : `chattingWebsocketHandler`
+- 위의 key : value 를 기반으로 하는 Map 을 SimpleUrlHandlerMapping 내의 urlMap 에 등록
+
+아래 코드에서 사용한 ChattingWebSocketHandler 는 WebSocketHandler 인터페이스를 implements 한 직접 정의한 사용자 정의 WebSocketHandler 입니다.
+
+```java
+package io.chagchagchag.example.foobar.websocket.config;
+
+import io.chagchagchag.example.foobar.websocket.handler.ChattingWebsocketHandler;
+import java.util.Map;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.reactive.handler.SimpleUrlHandlerMapping;
+import org.springframework.web.reactive.socket.WebSocketHandler;
+
+@Configuration
+public class MappingConfig {
+  @Bean
+  public SimpleUrlHandlerMapping simpleUrlHandlerMapping(
+      ChattingWebsocketHandler chattingWebsocketHandler
+  ){
+    Map<String, WebSocketHandler> urlMapper = Map.of(
+        "/chatting", chattingWebsocketHandler
+    );
+
+    SimpleUrlHandlerMapping mapping = new SimpleUrlHandlerMapping();
+    mapping.setOrder(1);
+    mapping.setUrlMap(urlMapper);
+    return mapping;
+  }
+}
+```
+
+<br/>
+
+
+
+#### ChattingWebsocketHandler
+
+WebSocketHandler 인터페이스를 implements 한 사용자 정의 WebSocketHandler 는 아래와 같습니다.<br/>
+
+ChattingWebSocketHandler 는 WebSocketHandler interface 에서 제공하는 명세를 따라 `handle()` 메서드를 제공합니다.<br/>
+
+```java
+package io.chagchagchag.example.foobar.websocket.handler;
+
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.socket.WebSocketHandler;
+import org.springframework.web.reactive.socket.WebSocketSession;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+@RequiredArgsConstructor
+@Component
+public class ChattingWebsocketHandler implements WebSocketHandler {
+  private final ChattingService chattingService;
+
+  @Override
+  public Mono<Void> handle(WebSocketSession session) {
+    String userName = (String) session.getAttributes().get("user-name");
+    Flux<Chat> chattingFlux = chattingService.register(userName);
+    chattingService.sendMessage(userName, new Chat(userName + "님이 채팅방에 입장하셨습니다.", "(System)"));
+
+    session
+        .receive()
+        .doOnNext(webSocketMessage -> {
+          String payload = webSocketMessage.getPayloadAsText();
+
+          String [] args = payload.split(":");
+          String to = args[0].trim();
+          String message = args[1].trim();
+
+          final boolean result = chattingService.sendMessage(to, new Chat(message, userName));
+
+          if(!result)
+            chattingService.sendMessage(userName, new Chat("대화상대가 없어요", "(System)"));
+        })
+        .subscribe();
+
+    return session.send(
+        chattingFlux.map(chat -> session.textMessage(chat.from() + ": " + chat.message()))
+    );
+  }
+
+}
+```
+
+handle() 메서드에서는 의존성 주입받은 ChattingService 를 이용해서 아래의 두가지 작업을 합니다.
+
+- register : 사용자 입장시 `[user-name]` : `Sinks.Many<Chat>` 를 put 해서 업데이트 합니다.
+- sendMessage : chattingService 내의 sendMessage() 함수를 호출합니다. sendMessage() 함수에서는 session 에 Sinks.Many 를 이용해서 tryEmitNext() 함수를 통해서 Sink 의 Next 연산 람다식을 WebSocketSession 의 doOnNext 에 등록해줍니다.
+
+ChattingService 내의 연산은 다음 섹션에서 설명합니다.<br/>
+
+마지막으로 WebSocketSession 의 send 연산을 수행하는데, 이때 이전에 등록해둔 Sinks.Many 에 tryEmit 을 하는 람다식을 실행하는데, 이 플럭스에 대해서 `[발신자]: [메시지]` 의 형태의 문자열로 변환을 한 메시지를 전송합니다.<br/>
+
+<br/>
+
+
+
+#### ChattingService
+
+
+
+
+
