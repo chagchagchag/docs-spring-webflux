@@ -591,7 +591,9 @@ public class ChattingWebsocketHandler implements WebSocketHandler {
 handle() 메서드에서는 의존성 주입받은 ChattingService 를 이용해서 아래의 두가지 작업을 합니다.
 
 - register : 사용자 입장시 `[user-name]` : `Sinks.Many<Chat>` 를 put 해서 업데이트 합니다.
-- sendMessage : chattingService 내의 sendMessage() 함수를 호출합니다. sendMessage() 함수에서는 session 에 Sinks.Many 를 이용해서 tryEmitNext() 함수를 통해서 Sink 의 Next 연산 람다식을 WebSocketSession 의 doOnNext 에 등록해줍니다.
+- sendMessage 
+  - chattingService 내의 sendMessage() 함수를 호출합니다. 
+  - Sinks.Many 의 tryEmitNext() 함수를 통해서 Sink 의 Next 연산 람다식내에 인자로 전달받은 `Chat` 데이터를 emit 해주게하는 식을 Sinks.Many 에 등록합니다.
 
 ChattingService 내의 연산은 다음 섹션에서 설명합니다.<br/>
 
@@ -603,7 +605,68 @@ ChattingService 내의 연산은 다음 섹션에서 설명합니다.<br/>
 
 #### ChattingService
 
+ChattingService 클래스는 Sinks 를 통해 트리거 이벤트를 발동시키는 역할을 하는 메서드 들을 정의해두었습니다.
 
+```java
+package io.chagchagchag.example.foobar.websocket.handler;
+
+import java.util.Map;
+import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Sinks;
+import reactor.core.publisher.Sinks.Many;
+
+@Slf4j
+@Service
+public class ChattingService {
+  private static Map<String, Many<Chat>> chattingSinkMap = new ConcurrentHashMap<>();
+
+  public Flux<Chat> register(String userName){
+    Many<Chat> sink = Sinks.many().unicast().onBackpressureBuffer();
+    chattingSinkMap.put(userName, sink);
+    return sink.asFlux();
+  }
+
+  public boolean sendMessage(String userName, Chat chat){
+    log.info("userName : {}, chat {}", userName, chat);
+
+    return Optional.ofNullable(chattingSinkMap.get(userName))
+        .map(chatMany -> {
+          if(chatMany.currentSubscriberCount() == 0) return Boolean.FALSE;
+          chatMany.tryEmitNext(chat);
+          return Boolean.TRUE;
+        })
+        .orElseGet(()->Boolean.FALSE);
+  }
+}
+```
+
+- register() 
+  - 사용자 입장시 `[user-name]` : `Sinks.Many<Chat>` 를 CuncurrentHashMap 에 put 해서 업데이트 합니다.
+  - 가급적이면 실무에서 사용한다면, 캐시 자료구조를 사용하는 것이 추천됩니다.
+- sendMessage()
+  - sendMessage() 함수에서는 Sinks.Many 의 tryEmitNext() 함수를 통해서 Sink 의 Next 연산 람다식내에 인자로 전달받은 `Chat` 데이터를 emit 해주게하는 식을 Sinks.Many 에 등록합니다.
+
+<br/>
+
+
+
+### Chat
+
+데이터를 보내는 단위 데이터 클래스입니다.
+
+```java
+package io.chagchagchag.example.foobar.websocket.handler;
+
+public record Chat(
+   String message,
+   String from
+) {
+}
+```
 
 
 
