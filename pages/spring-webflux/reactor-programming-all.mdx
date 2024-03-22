@@ -442,7 +442,7 @@ Process finished with exit code 0
 #### 2\) sink.next()를 두번 호출하면? 에러발생
 
 ```java
-package io.chagchagchag.example.foobar.spring_webflux.sequence;
+package io.chagchagchag...sequence;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -479,8 +479,8 @@ generate 에서 sink 객체를 이용해서 next() 함수를 통해 onNext 이�
 출력결과
 
 ```plain
-16:14:41.992 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxGenerateExample2 -- value === 0
-16:14:41.994 [main] ERROR io.chagchagchag.example.foobar.spring_webflux.sequence.FluxGenerateExample2 -- error === java.lang.IllegalStateException: More than one call to onNext
+16:14:41.992 [main] INFO io.chagchagchag...sequence.FluxGenerateExample2 -- value === 0
+16:14:41.994 [main] ERROR io.chagchagchag...sequence.FluxGenerateExample2 -- error === java.lang.IllegalStateException: More than one call to onNext
 
 Process finished with exit code 0
 ```
@@ -512,7 +512,7 @@ Flux.craete() 는 Flux 를 비동기적으로 생성합니다. 중간에 있는 
 예제
 
 ```java
-package io.chagchagchag.example.foobar.spring_webflux.sequence;
+package io.chagchagchag...sequence;
 
 import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
@@ -560,17 +560,17 @@ public class FluxCreateExample {
 출력결과<br/>
 
 ```plain
-16:24:55.472 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 0
-16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 5
-16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 6
-16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 7
-16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 8
-16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 9
-16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 1
-16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 2
-16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 3
-16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 4
-16:24:55.475 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- complete
+16:24:55.472 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag...sequence.FluxCreateExample -- value === 0
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag...sequence.FluxCreateExample -- value === 5
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag...sequence.FluxCreateExample -- value === 6
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag...sequence.FluxCreateExample -- value === 7
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag...sequence.FluxCreateExample -- value === 8
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag...sequence.FluxCreateExample -- value === 9
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag...sequence.FluxCreateExample -- value === 1
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag...sequence.FluxCreateExample -- value === 2
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag...sequence.FluxCreateExample -- value === 3
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag...sequence.FluxCreateExample -- value === 4
+16:24:55.475 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag...sequence.FluxCreateExample -- complete
 
 Process finished with exit code 0
 ```
@@ -623,7 +623,7 @@ source 의 item 을 필터링 하는 등 interceptor 같은 역할을 하게끔 
 예제
 
 ```java
-package io.chagchagchag.example.foobar.spring_webflux.sequence;
+package io.chagchagchag...sequence;
 
 import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
@@ -654,13 +654,13 @@ public class FluxHandleExample {
 출력결과
 
 ```plain
-16:37:34.735 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- value === 0
-16:37:34.737 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- value === 2
-16:37:34.737 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- value === 4
-16:37:34.737 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- value === 6
-16:37:34.737 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- value === 8
-16:37:34.737 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- value === 10
-16:37:34.738 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- complete
+16:37:34.735 [main] INFO io.chagchagchag...sequence.FluxHandleExample -- value === 0
+16:37:34.737 [main] INFO io.chagchagchag...sequence.FluxHandleExample -- value === 2
+16:37:34.737 [main] INFO io.chagchagchag...sequence.FluxHandleExample -- value === 4
+16:37:34.737 [main] INFO io.chagchagchag...sequence.FluxHandleExample -- value === 6
+16:37:34.737 [main] INFO io.chagchagchag...sequence.FluxHandleExample -- value === 8
+16:37:34.737 [main] INFO io.chagchagchag...sequence.FluxHandleExample -- value === 10
+16:37:34.738 [main] INFO io.chagchagchag...sequence.FluxHandleExample -- complete
 
 Process finished with exit code 0
 ```
@@ -766,9 +766,9 @@ doOnNext()<br/>
 출력결과
 
 ```plain
-17:26:42.596 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe1Example -- SAVE DATA >>> 배고파요
-17:26:42.598 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe1Example -- SAVE DATA >>> 밥먹어요
-17:26:42.598 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe1Example -- SAVE DATA >>> 배불러요
+17:26:42.596 [main] INFO io.chagchagchag...subscribe.Subscribe1Example -- SAVE DATA >>> 배고파요
+17:26:42.598 [main] INFO io.chagchagchag...subscribe.Subscribe1Example -- SAVE DATA >>> 밥먹어요
+17:26:42.598 [main] INFO io.chagchagchag...subscribe.Subscribe1Example -- SAVE DATA >>> 배불러요
 
 Process finished with exit code 0
 ```
@@ -782,7 +782,7 @@ Process finished with exit code 0
 정상일때, 에러일때, onComplete 일때 어떤것을 할지, initialContext 를 정의합니다.
 
 ```java
-package io.chagchagchag.example.foobar.spring_webflux.subscribe;
+package io.chagchagchag...subscribe;
 
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -829,10 +829,10 @@ initialContext
 출력결과
 
 ```plain
-17:31:30.686 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe2Example -- value === 배고파요
-17:31:30.688 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe2Example -- value === 밥먹어요
-17:31:30.688 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe2Example -- value === 배불러요
-17:31:30.689 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe2Example -- complete
+17:31:30.686 [main] INFO io.chagchagchag...subscribe.Subscribe2Example -- value === 배고파요
+17:31:30.688 [main] INFO io.chagchagchag...subscribe.Subscribe2Example -- value === 밥먹어요
+17:31:30.688 [main] INFO io.chagchagchag...subscribe.Subscribe2Example -- value === 배불러요
+17:31:30.689 [main] INFO io.chagchagchag...subscribe.Subscribe2Example -- complete
 
 Process finished with exit code 0
 ```
@@ -846,7 +846,7 @@ Process finished with exit code 0
 Publisher 가 Subscription 에 어떤 Subscriber 를 등록할지를 직접 지정합니다.
 
 ```java
-package io.chagchagchag.example.foobar.spring_webflux.subscribe;
+package io.chagchagchag...subscribe;
 
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -881,10 +881,10 @@ public class Subscribe3Example {
 출력결과
 
 ```plain
-18:47:08.696 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe3Example -- value === 배고파요
-18:47:08.699 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe3Example -- value === 밥먹어요
-18:47:08.699 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe3Example -- value === 배불러요
-18:47:08.699 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe3Example -- complte
+18:47:08.696 [main] INFO io.chagchagchag...subscribe.Subscribe3Example -- value === 배고파요
+18:47:08.699 [main] INFO io.chagchagchag...subscribe.Subscribe3Example -- value === 밥먹어요
+18:47:08.699 [main] INFO io.chagchagchag...subscribe.Subscribe3Example -- value === 배불러요
+18:47:08.699 [main] INFO io.chagchagchag...subscribe.Subscribe3Example -- complte
 
 Process finished with exit code 0
 ```
@@ -910,7 +910,7 @@ Subscriber 외부에서 request(n) 을 통해 요청할 수 있어서 backpressu
 예를 들어 아래의 코드는 Subscriber interface 에서 제공하는 backpressure 함수인 request () 함수를 이용했습니다. hookOnSubscribe() 에서 request(1) 을 통해서 1만큼 읽어들이겠다고 하는 방식으로 backpressure 관리 코드를 작성했습니다.<br/>
 
 ```java
-package io.chagchagchag.example.foobar.spring_webflux.subscribe;
+package io.chagchagchag...subscribe;
 
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -951,7 +951,7 @@ public class Subscribe4Example {
 출력결과
 
 ```plain
-19:04:26.426 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe4Example -- value === 배고파요
+19:04:26.426 [main] INFO io.chagchagchag...subscribe.Subscribe4Example -- value === 배고파요
 
 Process finished with exit code 0
 ```
@@ -1001,7 +1001,7 @@ BasePublisher 는 위에서 살펴봤던 request(n) 과 같은 backpressure 를 
 BasePublisher 는 위에서 살펴봤던 request(n) 과 같은 backpressure 를 관리하는 함수를 조금 더 다양하게 사용할 수 있는 함수 인 buffer(n) 을 제공합니다.
 
 ```java
-package io.chagchagchag.example.foobar.spring_webflux.subscribe;
+package io.chagchagchag...subscribe;
 
 import java.util.List;
 import java.util.stream.IntStream;
@@ -1046,8 +1046,8 @@ public class Buffer1Example {
 출력결과는 아래와 같습니다.<br/>
 
 ```plain
-19:38:07.365 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Buffer1Example -- value = [0, 1, 2]
-19:38:07.367 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Buffer1Example -- value = [3, 4, 5]
+19:38:07.365 [main] INFO io.chagchagchag...subscribe.Buffer1Example -- value = [0, 1, 2]
+19:38:07.367 [main] INFO io.chagchagchag...subscribe.Buffer1Example -- value = [3, 4, 5]
 
 Process finished with exit code 0
 ```
@@ -1065,7 +1065,7 @@ Publisher 에는 데이터가 수천만개가 있을 수 있습니다. 하지만
 그런데 take(n, limitRequest) 함수는 n개를 지정했더라도 정확하게 n개만큼 딱 떨어지게 끊지 못하는 경우도 있는데 limitRequest == true 로 설정할 경우에는 정확하게 n개 만큼을 take 할 수 있게 됩니다. 만약 limitRequest == false 일 경우 정확히 n 개를 take 하진 않더라도 그 비슷한 시간 대에 반환됩니다.<br/>
 
 ```java
-package io.chagchagchag.example.foobar.spring_webflux.subscribe;
+package io.chagchagchag...subscribe;
 
 import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
@@ -1101,18 +1101,18 @@ public class Subscribe5Example {
 출력결과
 
 ```plain
-19:54:18.272 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 0
-19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 1
-19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 2
-19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 3
-19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 4
-19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 5
-19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 6
-19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 7
-19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 8
-19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 9
-19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 10
-19:54:18.275 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- completed
+19:54:18.272 [main] INFO io.chagchagchag...subscribe.Subscribe5Example -- value == 0
+19:54:18.274 [main] INFO io.chagchagchag...subscribe.Subscribe5Example -- value == 1
+19:54:18.274 [main] INFO io.chagchagchag...subscribe.Subscribe5Example -- value == 2
+19:54:18.274 [main] INFO io.chagchagchag...subscribe.Subscribe5Example -- value == 3
+19:54:18.274 [main] INFO io.chagchagchag...subscribe.Subscribe5Example -- value == 4
+19:54:18.274 [main] INFO io.chagchagchag...subscribe.Subscribe5Example -- value == 5
+19:54:18.274 [main] INFO io.chagchagchag...subscribe.Subscribe5Example -- value == 6
+19:54:18.274 [main] INFO io.chagchagchag...subscribe.Subscribe5Example -- value == 7
+19:54:18.274 [main] INFO io.chagchagchag...subscribe.Subscribe5Example -- value == 8
+19:54:18.274 [main] INFO io.chagchagchag...subscribe.Subscribe5Example -- value == 9
+19:54:18.274 [main] INFO io.chagchagchag...subscribe.Subscribe5Example -- value == 10
+19:54:18.275 [main] INFO io.chagchagchag...subscribe.Subscribe5Example -- completed
 
 Process finished with exit code 0
 ```
@@ -1136,7 +1136,7 @@ onNext 이벤트 발행 시에 최소 delay 만큼의 간격을 두어서 delay 
 for 문 안에서는 10ms 만큼 지연이 발생하고, delayElements 에서는 최소 500ms 만큼 기다려주고 있습니다.
 
 ```java
-package io.chagchagchag.example.foobar.spring_webflux.delay_elements;
+package io.chagchagchag...delay_elements;
 
 import java.time.Duration;
 import lombok.SneakyThrows;
@@ -1180,11 +1180,11 @@ public class DelayElementsExample1 {
 출력결과
 
 ```plain
-20:44:50.730 [parallel-1] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample1 -- doOnNext = 1
-20:44:51.240 [parallel-2] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample1 -- doOnNext = 2
-20:44:51.756 [parallel-3] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample1 -- doOnNext = 3
-20:44:52.269 [parallel-4] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample1 -- doOnNext = 4
-20:44:52.782 [parallel-5] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample1 -- doOnNext = 5
+20:44:50.730 [parallel-1] INFO io.chagchagchag...delay_elements.DelayElementsExample1 -- doOnNext = 1
+20:44:51.240 [parallel-2] INFO io.chagchagchag...delay_elements.DelayElementsExample1 -- doOnNext = 2
+20:44:51.756 [parallel-3] INFO io.chagchagchag...delay_elements.DelayElementsExample1 -- doOnNext = 3
+20:44:52.269 [parallel-4] INFO io.chagchagchag...delay_elements.DelayElementsExample1 -- doOnNext = 4
+20:44:52.782 [parallel-5] INFO io.chagchagchag...delay_elements.DelayElementsExample1 -- doOnNext = 5
 
 Process finished with exit code 0
 
@@ -1201,7 +1201,7 @@ Process finished with exit code 0
 이번에는 for 문안에서 1000ms 를 지정합니다. delayElements 에서는 100ms 를 지정했습니다. 결과는 delayElements 의 100ms 는 최소로 기다려야 하는 시간이기에 for loop 의 1000ms 를 거친 후, delayElements 는 어이쿠 최소로 기다려야 하는 시간(100ms)이 넘어버렸네? 하면서 delayElements 는 넘어가게 됩니다.
 
 ```java
-package io.chagchagchag.example.foobar.spring_webflux.delay_elements;
+package io.chagchagchag...delay_elements;
 
 import java.time.Duration;
 import lombok.SneakyThrows;
@@ -1243,11 +1243,11 @@ public class DelayElementsExample2 {
 출력결과
 
 ```plain
-20:50:17.131 [parallel-1] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample2 -- doOnNext = 1
-20:50:18.142 [parallel-2] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample2 -- doOnNext = 2
-20:50:19.145 [parallel-3] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample2 -- doOnNext = 3
-20:50:20.155 [parallel-4] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample2 -- doOnNext = 4
-20:50:21.154 [parallel-5] INFO io.chagchagchag.example.foobar.spring_webflux.delay_elements.DelayElementsExample2 -- doOnNext = 5
+20:50:17.131 [parallel-1] INFO io.chagchagchag...delay_elements.DelayElementsExample2 -- doOnNext = 1
+20:50:18.142 [parallel-2] INFO io.chagchagchag...delay_elements.DelayElementsExample2 -- doOnNext = 2
+20:50:19.145 [parallel-3] INFO io.chagchagchag...delay_elements.DelayElementsExample2 -- doOnNext = 3
+20:50:20.155 [parallel-4] INFO io.chagchagchag...delay_elements.DelayElementsExample2 -- doOnNext = 4
+20:50:21.154 [parallel-5] INFO io.chagchagchag...delay_elements.DelayElementsExample2 -- doOnNext = 5
 
 Process finished with exit code 0
 ```
@@ -1258,7 +1258,219 @@ Process finished with exit code 0
 
 ## concat(), merge(), mergeSequential()
 
+### concat()
+
+
+
+![](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/doc-files/marbles/concatVarSources.svg)
+
+> 출처 : https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html#concat-java.lang.Iterable-
+
 <br/>
+
+현재 Publisher 를 다른 Publisher 와 합치는 연산을 수행합니다. 위의 그림을 설명해보면, 바로 앞의 Publisher 가 onComplete 를 전파하면 바로 다음 Publisher 를 subscribe() 합니다.<br/>
+
+그림을 보면 Publisher 두개를 합치는 도중에 각각의 Publiser 의 onNext 연산에 대한 순서가 각각의 요소에 대해 지켜지고 있는 것을 확인 가능합니다.<br/>
+
+```java
+package io.chagchagchag...concat_merge_mergesequential;
+
+import java.time.Duration;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class ConcatExample1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    var flux1 = Flux.range(1,3)
+        .doOnSubscribe(v -> {
+          log.info("doOnSubscribe flux#1");
+        })
+        .delayElements(Duration.ofMillis(100));
+
+    var flux2 = Flux.range(11, 3)
+        .doOnSubscribe(v -> {
+          log.info("doOnSubscribe flux#2");
+        })
+        .delayElements(Duration.ofMillis(100));
+
+    Flux.concat(flux1, flux2)
+        .doOnNext(v -> {log.info("doOnNext " + v);})
+        .subscribe();
+
+    Thread.sleep(2000);
+  }
+}
+```
+
+<br/>
+
+출력결과를 보면 `doOnSubscribe flux#1`, `doOnSubscribe flux#2`  를 통해 두개의 Publisher 를 순서대로 받음을 알수 있고, 데이터의 순서 역시 로그를 확인해보면 순서대로 들어온다는 것이 보장됩니다.<br/>
+
+
+
+출력결과
+
+```plain
+00:22:07.475 [main] INFO io.chagchagchag...concat_merge_mergesequential.ConcatExample1 -- doOnSubscribe flux#1
+00:22:07.596 [parallel-1] INFO io.chagchagchag...concat_merge_mergesequential.ConcatExample1 -- doOnNext 1
+00:22:07.704 [parallel-2] INFO io.chagchagchag...concat_merge_mergesequential.ConcatExample1 -- doOnNext 2
+00:22:07.814 [parallel-3] INFO io.chagchagchag...concat_merge_mergesequential.ConcatExample1 -- doOnNext 3
+00:22:07.814 [parallel-3] INFO io.chagchagchag...concat_merge_mergesequential.ConcatExample1 -- doOnSubscribe flux#2
+00:22:07.922 [parallel-4] INFO io.chagchagchag...concat_merge_mergesequential.ConcatExample1 -- doOnNext 11
+00:22:08.029 [parallel-5] INFO io.chagchagchag...concat_merge_mergesequential.ConcatExample1 -- doOnNext 12
+00:22:08.138 [parallel-6] INFO io.chagchagchag...concat_merge_mergesequential.ConcatExample1 -- doOnNext 13
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+### merge()
+
+![](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/doc-files/marbles/mergeFixedSources.svg)
+
+> 출처 : https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html#merge-org.reactivestreams.Publisher...-
+
+<br/>
+
+그림을 보면 가로 축 화살표가 두개인 것을 확인 가능합니다. 두개의 Publisher 가 흐르고 있는데, 이 것을 공통 축에 합치고 있습니다.순서는 보장되지 않습니다.
+
+<br/>
+
+```java
+package io.chagchagchag...concat_merge_mergesequential;
+
+import java.time.Duration;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class MergeExample1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    var flux1 = Flux.range(1,3)
+        .doOnSubscribe(v -> {
+          log.info("doOnSubscribe #1");
+        })
+        .delayElements(Duration.ofMillis(100));
+
+    var flux2 = Flux.range(11, 3)
+        .doOnSubscribe(v -> {
+          log.info("doOnSubscribe #2");
+        })
+        .delayElements(Duration.ofMillis(100));
+
+    Flux.merge(flux1, flux2)
+        .doOnNext(v -> {log.info("doOnNext : " + v);})
+        .subscribe();
+
+    Thread.sleep(2000);
+  }
+}
+```
+
+<br/>
+
+출력결과를 보면 `doOnSubscribe#1`, `doOnSubscribe#2` 가 근소한 차이로 시작되었고, 각 요소들의 순서도 지켜지지 않은 것을 확인 가능합니다.<br/>
+
+
+
+출력결과
+
+```plain
+00:37:08.038 [main] INFO io.chagchagchag...concat_merge_mergesequential.MergeExample1 -- doOnSubscribe #1
+00:37:08.048 [main] INFO io.chagchagchag...concat_merge_mergesequential.MergeExample1 -- doOnSubscribe #2
+00:37:08.157 [parallel-2] INFO io.chagchagchag...concat_merge_mergesequential.MergeExample1 -- doOnNext : 11
+00:37:08.161 [parallel-1] INFO io.chagchagchag...concat_merge_mergesequential.MergeExample1 -- doOnNext : 1
+00:37:08.267 [parallel-4] INFO io.chagchagchag...concat_merge_mergesequential.MergeExample1 -- doOnNext : 2
+00:37:08.267 [parallel-4] INFO io.chagchagchag...concat_merge_mergesequential.MergeExample1 -- doOnNext : 12
+00:37:08.377 [parallel-5] INFO io.chagchagchag...concat_merge_mergesequential.MergeExample1 -- doOnNext : 13
+00:37:08.377 [parallel-5] INFO io.chagchagchag...concat_merge_mergesequential.MergeExample1 -- doOnNext : 3
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+### mergeSequential()
+
+Publisher 를 다른 Publisher 와 합치는 연산을 수행하는 함수입니다. 모든 Publisher 를 바로 subscribe 합니다. Publisher 의 onNext 이벤트가 동시에 도달하는데, merge 와는 다르게 내부에서 재정렬하기에 순서를 보장합니다.
+
+![](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/doc-files/marbles/mergeSequentialVarSources.svg)
+
+
+
+<br/>
+
+```java
+package io.chagchagchag...concat_merge_mergesequential;
+
+import java.time.Duration;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class MergeSequentialExample1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    var flux1 = Flux.range(1,3)
+        .doOnSubscribe(v -> {
+          log.info("doOnSubscribe #1");
+        })
+        .delayElements(Duration.ofMillis(100));
+
+    var flux2 = Flux.range(11,3)
+        .doOnSubscribe(v -> {
+          log.info("doOnSubscribe #2");
+        })
+        .delayElements(Duration.ofMillis(100));
+
+    Flux.mergeSequential(flux1, flux2)
+        .doOnNext(v -> {
+          log.info("doOnNext : " + v);
+        })
+        .subscribe();
+
+    Thread.sleep(2000);
+  }
+}
+```
+
+출력결과를 보면 `doOnSubscribe #1`, `doOnSubscribe #2` 가 거의 동시에 subscribe 되었다는 사실을 알 수 있습니다. 그리고 각각의 요소들은 각 Publisher 내에서의 순서에 맞게 Publisher 별로 이어져서 나오는 것을 확인 가능합니다.<br/>
+
+
+
+출력결과
+
+```plain
+00:43:52.235 [main] INFO io.chagchagchag...concat_merge_mergesequential.MergeSequentialExample1 -- doOnSubscribe #1
+00:43:52.243 [main] INFO io.chagchagchag...concat_merge_mergesequential.MergeSequentialExample1 -- doOnSubscribe #2
+00:43:52.360 [parallel-1] INFO io.chagchagchag...concat_merge_mergesequential.MergeSequentialExample1 -- doOnNext : 1
+00:43:52.468 [parallel-4] INFO io.chagchagchag...concat_merge_mergesequential.MergeSequentialExample1 -- doOnNext : 2
+00:43:52.578 [parallel-6] INFO io.chagchagchag...concat_merge_mergesequential.MergeSequentialExample1 -- doOnNext : 3
+00:43:52.578 [parallel-6] INFO io.chagchagchag...concat_merge_mergesequential.MergeSequentialExample1 -- doOnNext : 11
+00:43:52.578 [parallel-6] INFO io.chagchagchag...concat_merge_mergesequential.MergeSequentialExample1 -- doOnNext : 12
+00:43:52.578 [parallel-6] INFO io.chagchagchag...concat_merge_mergesequential.MergeSequentialExample1 -- doOnNext : 13
+
+Process finished with exit code 0
+```
+
+
+
+
+
+
+
+
 
 
 
