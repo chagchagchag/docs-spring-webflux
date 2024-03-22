@@ -10,6 +10,10 @@ Spring Webflux 는 pivotal 사에서 개발한 project reactor 를 기반으로 
 >
 > - Flux : [projectreactor.io - Flux](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html)
 > - Mono : [projectreactor.io - Mono](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html)
+> - Publiser : [reactive-streams - Publisher](https://github.com/reactive-streams/reactive-streams-jvm/blob/master/api/src/main/java/org/reactivestreams/Publisher.java)
+> - Subscriber : [reactive-streams - Subscriber](https://github.com/reactive-streams/reactive-streams-jvm/blob/master/api/src/main/java/org/reactivestreams/Subscriber.java)
+
+<br/>
 
 
 
@@ -21,8 +25,6 @@ Spring Webflux 는 pivotal 사에서 개발한 project reactor 를 기반으로 
   - [projectreactor.io - Mono](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html) 을 보면 알 수 있듯 Publisher 를 implements 한 클래스이기에 자료구조라기보다는 데이터의 흐름이라는 사실을 기억해주시기 바랍니다.
 
 <br/>
-
-
 
 Flux 하나만 쓰면 될것 같은데 Mono 가 존재하는 이유에 대해 생각이 들 수 있습니다. Mono 라는 자료형이 존재하는 것으로 인한 장점은 아래와 같습니다.
 
@@ -668,6 +670,452 @@ Process finished with exit code 0
 
 
 ## subscribe(), Subscriber
+
+Flux, Mono 와 같은 Publisher 는 subscribe 를 하지 않으면 아무 일도 일어나지 않습니다. 예를 들면 아래와 같은 코드는 아무 일도 일어나지 않으며 그냥 표현식일 뿐입니다.
+
+```java
+Flux.fromIterable(List.of("배고파요", "밥먹어요", "배불러요"))
+    .doOnNext(v -> {log.info(">>> " + v);});
+```
+
+<br/>
+
+
+
+### subscribe()
+
+예를 들어 Flux 의 코드를 보면, subscribe() 함수는 아래와 같은 메서드들이 있습니다. 오버로딩 된 여러가지 메서드들이 있지만, 가장 대표적인 메서드 들은 아래와 같습니다.
+
+```java
+package reactor.core.publisher;
+
+// ...
+
+public abstract class Flux<T> implements CorePublisher<T> {
+    public final Disposable subscribe() {
+		return subscribe(null, null, null);
+	}
+    
+    public final Disposable subscribe(
+			@Nullable Consumer<? super T> consumer,
+			@Nullable Consumer<? super Throwable> errorConsumer,
+			@Nullable Runnable completeConsumer,
+			@Nullable Context initialContext) {
+		return subscribeWith(new LambdaSubscriber<>(consumer, errorConsumer,
+				completeConsumer,
+				null,
+				initialContext));
+	}
+    
+    @Override
+	@SuppressWarnings("unchecked")
+	public final void subscribe(Subscriber<? super T> actual) {
+		// ...
+	}
+}
+```
+
+<br/>
+
+
+
+- subscribe()
+  - 별도의 Consumer 를 전달 받지 않은 채로 subscribe 합니다.
+- subscribe (consumer, errorConsumer, completeConsumer, initialContext)
+  - 함수형 인터페이스를 이용해서 subscribe 를 합니다. Disposable 을 반환해서 이 Disposable 을 이용해서 언제든지 연결을 종료하는 것이 가능합니다.
+- subscribe (Subscriber)
+  - 별도의 Subscriber 를 전달받아서 subscribe 합니다.
+  - 예를 들면 [BaseSubscriber](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/BaseSubscriber.html) 같은 Subscriber 를 인자로 전달하거나, 비즈니스 로직에 따라 특수하게 [BaseSubscriber](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/BaseSubscriber.html) 를 별도로 확장(extends)한 커스텀한 Subscriber 를 넘겨줘서 subscribe 하는 경우도 있습니다.
+  - [BaseSubscriber](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/BaseSubscriber.html) 는 project reactor 에서 제공하는 배압관리를 위해 필요한 것들이 잘 갖춰져 있는 클래스입니다.
+  - 이때 Subscriber 는 subscription 을 Publisher 로부터 전달 받습니다. 그리고 이 subscription 객체를 이용해서 request를 통해서 backpressure 를 조절하거나, cancel 을 통해서 연결 종료할 수 있습니다.
+  - Subscriber 를 직접 작성할 경우에 어떻게 작성하는지 궁금하시다면 [Publisher, Subscriber, Supscription, Backpressure 문서](https://chagchagchag.github.io/docs-spring-webflux/reactive-programming/publisher-subscriber-subscription-backpressure/) 를 참고해주시기 바랍니다.
+
+<br/>
+
+
+
+#### subscribe()
+
+Publiser 에서 데이터의 흐름을 만들긴 하지만, 이 데이터들을 Subscriber 측에서 받아서 별도의 처리를 할 필요가 없이 뒷단에서만 동작하게끔 해야 할 경우 단순한 형태의 subscribe() 메서드를 사용합니다.
+
+```java
+@Slf4j
+public class Subscribe1Example {
+  public static void main(String[] args) {
+    Flux.fromIterable(List.of("배고파요", "밥먹어요", "배불러요"))
+        .doOnNext(v -> { save(v);})
+        .subscribe();
+  }
+
+  public static void save(String s){
+    log.info("SAVE DATA >>> " + s);
+  }
+}
+```
+
+<br/>
+
+doOnNext()<br/>
+
+- 결과를 확인하고 싶을 때나, 지나가는 값들을 통해서 별도의 작업을 확인하고 싶을 때 사용합니다.
+
+<br/>
+
+
+
+출력결과
+
+```plain
+17:26:42.596 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe1Example -- SAVE DATA >>> 배고파요
+17:26:42.598 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe1Example -- SAVE DATA >>> 밥먹어요
+17:26:42.598 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe1Example -- SAVE DATA >>> 배불러요
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+#### subscribe (consumer, errorConsumer, completeConsumer, initialContext)
+
+정상일때, 에러일때, onComplete 일때 어떤것을 할지, initialContext 를 정의합니다.
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.subscribe;
+
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.util.context.Context;
+
+@Slf4j
+public class Subscribe2Example {
+  public static void main(String[] args) {
+    Flux.fromIterable(List.of("배고파요", "밥먹어요", "배불러요"))
+        .subscribe(
+            v -> {log.info("value === " + v);},
+            error -> {log.error("error === " + error);},
+            () -> {log.info("complete");},
+            Context.empty()
+        );
+  }
+}
+
+```
+
+<br/>
+
+consumer 
+
+- 인자값을 받아서 해야 할 일을 Consumer 함수형 인터페이스에 맞게 구현합니다.
+
+errorConsumer
+
+- errorConsumer 에는 에러를 인자로 받아서 처리하는 Consumer 를 넘겨주면 됩니다.
+
+completeConsumer
+
+- onComplete 신호가 발생했을 때 실행할 Runnable 인터페이스의 람다 바디를 이곳에 정의해줍니다.
+
+initialContext
+
+- upstream 에 전달할 context 입니다.
+
+<br/>
+
+
+
+출력결과
+
+```plain
+17:31:30.686 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe2Example -- value === 배고파요
+17:31:30.688 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe2Example -- value === 밥먹어요
+17:31:30.688 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe2Example -- value === 배불러요
+17:31:30.689 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe2Example -- complete
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+#### subscribe (Subscriber)
+
+Publisher 가 Subscription 에 어떤 Subscriber 를 등록할지를 직접 지정합니다.
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.subscribe;
+
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.BaseSubscriber;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class Subscribe3Example {
+  public static void main(String[] args) {
+    var subscriber = new BaseSubscriber<String>(){
+      @Override
+      protected void hookOnNext(String value) {
+        log.info("value === " + value);
+      }
+
+      @Override
+      protected void hookOnComplete() {
+        log.info("complte");
+      }
+    };
+
+    Flux.fromIterable(List.of("배고파요", "밥먹어요", "배불러요"))
+        .subscribe(subscriber);
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+18:47:08.696 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe3Example -- value === 배고파요
+18:47:08.699 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe3Example -- value === 밥먹어요
+18:47:08.699 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe3Example -- value === 배불러요
+18:47:08.699 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe3Example -- complte
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+### BaseSubscriber
+
+예제에서 사용한 [BaseSubscriber](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/BaseSubscriber.html) 는 projectreactor 에서 제공하는 [BaseSubscriber](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/BaseSubscriber.html) 를 사용했습니다.<br/>
+
+BaseSubscriber 내의  hookOnNext(), hookOnComplete(), hookOnError(), hookOnSubscribe() 를  override 해서 cancel, request 를 별도로 호출할 수 있도록 정의할 수 있습니다.<br/>
+
+<br/>
+
+####  backpressure 관리함수 : request(n)
+
+**Publisher 에게 "아이템을 n 만큼씩 주세요" 하면서 그 속도를 조절하는 함수**입니다.<br/>
+
+Subscriber 외부에서 request(n) 을 통해 요청할 수 있어서 backpressure 의 속도를 조절하는 등의 작업을 할 때 유용하게 쓰입니다.<br/>
+
+예를 들어 아래의 코드는 Subscriber interface 에서 제공하는 backpressure 함수인 request () 함수를 이용했습니다. hookOnSubscribe() 에서 request(1) 을 통해서 1만큼 읽어들이겠다고 하는 방식으로 backpressure 관리 코드를 작성했습니다.<br/>
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.subscribe;
+
+import java.util.List;
+import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Subscription;
+import reactor.core.publisher.BaseSubscriber;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class Subscribe4Example {
+  public static void main(String[] args) {
+    var subscriber = new BaseSubscriber<String>(){
+      @Override
+      protected void hookOnSubscribe(Subscription subscription) {
+        request(1); // backpressure 함수인 reuest(n) 호출
+      }
+
+      @Override
+      protected void hookOnNext(String value) {
+        log.info("value === " + value);
+      }
+
+      @Override
+      protected void hookOnComplete() {
+        log.info("complte");
+      }
+    };
+
+    Flux.fromIterable(List.of("배고파요", "밥먹어요", "배불러요"))
+        .subscribe(subscriber);
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+19:04:26.426 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe4Example -- value === 배고파요
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+#### backpressure 관리함수 : requestUnbounded() 
+
+requestUnbounded() 는 request(Long.MAX\_VALUE) 로 실행되는데, <br/>
+
+Publisher 에게 "가능한 빠르게 아에템을 전달해주세요"와 같은 의미의 요청입니다.<br/>
+
+Subscriber 외부에서 request(n) 을 통해 요청할 수 있어서 backpressure 의 속도를 조절하는 등의 작업을 할 때 유용하게 쓰입니다.<br/>
+
+request 를 거의 무한대에 가까운 숫자로 요청하기에 가지고 있는 것들을 모두 한번에 보내주세요 라는 의미와 같습니다. 또한 backpressure 의 속도를 조절하지 않고 한번에 요청하므로 거의 backpressure 를 비활성화 한것과 같은 효과를 냅니다.<br/>
+
+BaseSubscriber 의 기본 전략은 requestUnbounded() 입니다.<br/>
+
+<br/>
+
+
+
+#### requestUnbounded(), request(Long.MAX\_VALUE) 가 발생하는 경우
+
+아래와 같은 경우에 request(Long.MAX\_VALUE) 와 같은 요청이 발생됩니다.
+
+- 아무 인자 없이 사용되는 subscribe() 함수 
+- BaseSubscriber 의 hookOnSubscribe() 를 그대로 사용할 경우
+- BaseSubscriber 를 재정의 없이 그냥 사용할 경우
+- block(), blockFirst(), blockLast() 등의 blocking 연산자를 사용할 경우 
+- toIterable(), toStream() 등의 toCallect 연산자를 사용할 경우
+
+<br/>
+
+
+
+BasePublisher 는 위에서 살펴봤던 request(n) 과 같은 backpressure 를 관리하는 함수를 조금 더 다양하게 사용할 수 있는 함수를 제공합니다.<br/>
+
+<br/>
+
+
+
+#### buffer(n)
+
+BasePublisher 는 위에서 살펴봤던 request(n) 과 같은 backpressure 를 관리하는 함수를 조금 더 다양하게 사용할 수 있는 함수 인 buffer(n) 을 제공합니다.
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.subscribe;
+
+import java.util.List;
+import java.util.stream.IntStream;
+import lombok.extern.slf4j.Slf4j;
+import org.reactivestreams.Subscription;
+import reactor.core.publisher.BaseSubscriber;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class Buffer1Example {
+  public static void main(String[] args) {
+    var subscriber = new BaseSubscriber<List<Integer>>(){
+      @Override
+      protected void hookOnSubscribe(Subscription subscription) {
+        request(2);
+      }
+
+      @Override
+      protected void hookOnNext(List<Integer> value) {
+        log.info("value = " + value);
+      }
+
+      @Override
+      protected void hookOnComplete() {
+        log.info("complete");
+      }
+    };
+
+    Flux.fromStream(IntStream.range(0,20).boxed())
+        .buffer(3)
+        .subscribe(subscriber);
+  }
+}
+```
+
+
+
+(request = 2) x (buffer = 3) = 6 입니다.
+
+한번의 요청에 size 가 3 인 List 를 buffer 로 전달하고 이것을 requet(2) 를 통해 한번의 엘리먼트에서 (3개짜리 리스트) 를 2회 요청하는 효과를 냅니다.<br/>
+
+출력결과는 아래와 같습니다.<br/>
+
+```plain
+19:38:07.365 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Buffer1Example -- value = [0, 1, 2]
+19:38:07.367 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Buffer1Example -- value = [3, 4, 5]
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+#### take(n, limitRequest)
+
+BasePublisher 는 위에서 살펴봤던 request(n) 과 같은 backpressure 를 관리하는 함수를 조금 더 다양하게 사용할 수 있는 함수인 take(n, limitRequest) 를 제공합니다.<br/>
+
+Publisher 에는 데이터가 수천만개가 있을 수 있습니다. 하지만 데이터를 SQL의 limit 문 처럼 원하는 갯수만 구독하려 할 경우에는 take(n, limitRequest) 를 사용합니다.<br/>
+
+그런데 take(n, limitRequest) 함수는 n개를 지정했더라도 정확하게 n개만큼 딱 떨어지게 끊지 못하는 경우도 있는데 limitRequest == true 로 설정할 경우에는 정확하게 n개 만큼을 take 할 수 있게 됩니다. 만약 limitRequest == false 일 경우 정확히 n 개를 take 하진 않더라도 그 비슷한 시간 대에 반환됩니다.<br/>
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.subscribe;
+
+import java.util.stream.IntStream;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.BaseSubscriber;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class Subscribe5Example {
+  public static void main(String[] args) {
+    var subscriber = new BaseSubscriber<Integer>(){
+      @Override
+      protected void hookOnNext(Integer value) {
+        log.info("value == " + value);
+      }
+
+      @Override
+      protected void hookOnComplete() {
+        log.info("completed");
+      }
+    };
+
+    Flux.fromStream(IntStream.range(0, 20).boxed())
+        .take(11, true)
+        .subscribe(subscriber);
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+19:54:18.272 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 0
+19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 1
+19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 2
+19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 3
+19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 4
+19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 5
+19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 6
+19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 7
+19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 8
+19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 9
+19:54:18.274 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- value == 10
+19:54:18.275 [main] INFO io.chagchagchag.example.foobar.spring_webflux.subscribe.Subscribe5Example -- completed
+
+Process finished with exit code 0
+```
 
 <br/>
 
