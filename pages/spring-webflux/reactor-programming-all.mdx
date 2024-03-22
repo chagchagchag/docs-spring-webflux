@@ -94,7 +94,7 @@ Mono.error, Flux.error 를 사용하면 subscriber 에게 onError 이벤트를 �
 반드시 **"subscriber 에게 onError 이벤트를 전달한다."**라는 의미를 꼭 기억해주셨으면 합니다.<br/>
 
 ```java
-package io.chagchagchag.example.foobar.spring_webflux.sequence;
+package io...sequence;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -127,8 +127,8 @@ public class ErrorExample {
 출력결과
 
 ```plain
-15:27:13.589 [main] ERROR io.chagchagchag.example.foobar.spring_webflux.sequence.ErrorExample -- error ::: java.lang.IllegalArgumentException: 어머, 에러에요
-15:27:13.699 [main] ERROR io.chagchagchag.example.foobar.spring_webflux.sequence.ErrorExample -- error ::: java.lang.IllegalArgumentException: 어머, 에러에요
+15:27:13.589 [main] ERROR io...sequence.ErrorExample -- error ::: java.lang.IllegalArgumentException: 어머, 에러에요
+15:27:13.699 [main] ERROR io...sequence.ErrorExample -- error ::: java.lang.IllegalArgumentException: 어머, 에러에요
 
 Process finished with exit code 0
 ```
@@ -142,7 +142,7 @@ Process finished with exit code 0
 Mono.empty, Flux.empty 를 써보는 예제입니다. empty 를 사용하면 Mono 또는 Flux 에게 onComplete 이벤트만 전달되게 됩니다.
 
 ```java
-package io.chagchagchag.example.foobar.spring_webflux.sequence;
+package io...sequence;
 
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -175,8 +175,8 @@ public class EmptyExample {
 출력결과
 
 ```plain
-15:31:46.735 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.EmptyExample -- complete
-15:31:46.792 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.EmptyExample -- complete
+15:31:46.735 [main] INFO io...sequence.EmptyExample -- complete
+15:31:46.792 [main] INFO io...sequence.EmptyExample -- complete
 
 Process finished with exit code 0
 ```
@@ -203,7 +203,7 @@ Mono.from 으로 시작하는 함수들은 아래와 같습니다.
 
 
 ```java
-package io.chagchagchag.example.foobar.spring_webflux.sequence;
+package io...sequence;
 
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
@@ -246,11 +246,11 @@ public class MonoFromExample {
 출력결과
 
 ```plain
-15:45:03.043 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.MonoFromExample -- fromCallable 에서 받은 value === 삼성전자
-15:45:03.049 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.MonoFromExample -- fromFuture 로부터 받은 value === 삼성전자
-15:45:03.051 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.MonoFromExample -- fromSupplier 로부터 받은 value === 삼성전자
-15:45:03.052 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.MonoFromExample -- do some runnable
-15:45:03.052 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.MonoFromExample -- fromRunnable Complete.
+15:45:03.043 [main] INFO io...sequence.MonoFromExample -- fromCallable 에서 받은 value === 삼성전자
+15:45:03.049 [main] INFO io...sequence.MonoFromExample -- fromFuture 로부터 받은 value === 삼성전자
+15:45:03.051 [main] INFO io...sequence.MonoFromExample -- fromSupplier 로부터 받은 value === 삼성전자
+15:45:03.052 [main] INFO io...sequence.MonoFromExample -- do some runnable
+15:45:03.052 [main] INFO io...sequence.MonoFromExample -- fromRunnable Complete.
 
 Process finished with exit code 0
 ```
@@ -271,6 +271,29 @@ Flux.from 으로 시작하는 함수들은 아래와 같습니다.
 
 
 ```java
+package io...sequence;
+
+import java.util.List;
+import java.util.stream.IntStream;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class FluxFromExample {
+  public static void main(String[] args) {
+    Flux.fromIterable(List.of("MSFT", "NVDA", "SMCI"))
+        .subscribe(v -> {log.info("value ==> " + v);});
+
+    Flux.fromStream(IntStream.range(1,10).boxed())
+        .subscribe(v -> {log.info("value ==> " + v);});
+
+    Flux.fromArray(new Integer[]{1,2,3,4,5,6,7,8,9,10})
+        .subscribe(v -> {log.info("value ==> " + v);});
+
+    Flux.range(1,10)
+        .subscribe(v -> {log.info("value ==> " + v);});
+  }
+}
 ```
 
 <br/>
@@ -280,6 +303,40 @@ Flux.from 으로 시작하는 함수들은 아래와 같습니다.
 출력결과
 
 ```plain
+15:53:24.737 [main] INFO io...sequence.FluxFromExample -- value ==> MSFT
+15:53:24.740 [main] INFO io...sequence.FluxFromExample -- value ==> NVDA
+15:53:24.740 [main] INFO io...sequence.FluxFromExample -- value ==> SMCI
+15:53:24.746 [main] INFO io...sequence.FluxFromExample -- value ==> 1
+15:53:24.746 [main] INFO io...sequence.FluxFromExample -- value ==> 2
+15:53:24.746 [main] INFO io...sequence.FluxFromExample -- value ==> 3
+15:53:24.747 [main] INFO io...sequence.FluxFromExample -- value ==> 4
+15:53:24.747 [main] INFO io...sequence.FluxFromExample -- value ==> 5
+15:53:24.747 [main] INFO io...sequence.FluxFromExample -- value ==> 6
+15:53:24.747 [main] INFO io...sequence.FluxFromExample -- value ==> 7
+15:53:24.747 [main] INFO io...sequence.FluxFromExample -- value ==> 8
+15:53:24.747 [main] INFO io...sequence.FluxFromExample -- value ==> 9
+15:53:24.749 [main] INFO io...sequence.FluxFromExample -- value ==> 1
+15:53:24.749 [main] INFO io...sequence.FluxFromExample -- value ==> 2
+15:53:24.749 [main] INFO io...sequence.FluxFromExample -- value ==> 3
+15:53:24.749 [main] INFO io...sequence.FluxFromExample -- value ==> 4
+15:53:24.749 [main] INFO io...sequence.FluxFromExample -- value ==> 5
+15:53:24.749 [main] INFO io...sequence.FluxFromExample -- value ==> 6
+15:53:24.749 [main] INFO io...sequence.FluxFromExample -- value ==> 7
+15:53:24.749 [main] INFO io...sequence.FluxFromExample -- value ==> 8
+15:53:24.749 [main] INFO io...sequence.FluxFromExample -- value ==> 9
+15:53:24.749 [main] INFO io...sequence.FluxFromExample -- value ==> 10
+15:53:24.751 [main] INFO io...sequence.FluxFromExample -- value ==> 1
+15:53:24.751 [main] INFO io...sequence.FluxFromExample -- value ==> 2
+15:53:24.751 [main] INFO io...sequence.FluxFromExample -- value ==> 3
+15:53:24.751 [main] INFO io...sequence.FluxFromExample -- value ==> 4
+15:53:24.751 [main] INFO io...sequence.FluxFromExample -- value ==> 5
+15:53:24.751 [main] INFO io...sequence.FluxFromExample -- value ==> 6
+15:53:24.751 [main] INFO io...sequence.FluxFromExample -- value ==> 7
+15:53:24.751 [main] INFO io...sequence.FluxFromExample -- value ==> 8
+15:53:24.751 [main] INFO io...sequence.FluxFromExample -- value ==> 9
+15:53:24.751 [main] INFO io...sequence.FluxFromExample -- value ==> 10
+
+Process finished with exit code 0
 ```
 
 <br/>
@@ -288,9 +345,143 @@ Flux.from 으로 시작하는 함수들은 아래와 같습니다.
 
 ### Flux.generate
 
-#### 1) next()
+generate 는 동기적으로 Flux 를 생성합니다.<br/>
 
-#### 2\) next()를 두번 호출하면? 에러발생
+[Flux.java(github)](https://github.com/reactor/reactor-core/blob/main/reactor-core/src/main/java/reactor/core/publisher/Flux.java) 내에 선언된 generate() 메서드는 세 종류의 메서드가 있는데 그 중 한 가지는 아래와 같습니다.
+
+```java
+public abstract class Flux<T> implements CorePublisher<T>{
+    // ...
+    public static <T, S> Flux<T> generate(Callable<S> stateSupplier, BiFunction<S, SynchronousSink<T>, S> generator) {
+		return onAssembly(new FluxGenerate<>(stateSupplier, generator));
+	}
+    // ...
+
+}
+```
+
+<br/>
+
+stateSupplier 
+
+- 초기값을 제공하는 역할의 callable 입니다.
+
+generator
+
+- 첫번째 인자로는 state 를 제공합니다. 그리고 이 state 에 대해 변경된 state 를 반환합니다.
+- 두번째 인자로 SynchronousSink 를 제공합니다. 이 sink 객체의 next, error, complete 메서드를 이용해서 Subscriber 에게 onNext, onError, onComplete 이벤트를 전달하는 것이 가능합니다. 
+- 한번의 generator 에서는 최대 한번만 next 를 호출 가능합니다.
+
+<br/>
+
+
+
+#### 1) sink.next()
+
+```java
+package io...sequence;
+
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class FluxGenerateExample1 {
+  public static void main(String[] args) {
+    Flux.generate(
+        () -> 0,
+        (state, sink) -> {
+          sink.next(state);
+          if(state == 9) sink.complete();
+          return state + 1;
+        }
+    ).subscribe(
+        v -> {log.info("value === " + v);},
+        error -> {log.error("error === " + error);},
+        () -> {log.info("complete !!");}
+    );
+  }
+}
+```
+
+<br/>
+
+
+
+초기값은 0 으로 세팅해줬습니다. 매 순간 다음 스텝의 연산을 수행하는 것은 state + 1 을 통해서 다음 스텝의 연산을 합니다. 그리고 state 가 9 가 되었을 때는 sink 객체의 complete() 메서드를 호출해서 onComplete 신호를 방출합니다. <br/>
+
+자세히 보면 FSM, CPS 연산과 닮아있음을 알 수 있습니다.<br/>
+
+<br/>
+
+
+
+출력결과
+
+```plain
+16:07:48.178 [main] INFO io...sequence.FluxGenerateExample1 -- value === 0
+16:07:48.180 [main] INFO io...sequence.FluxGenerateExample1 -- value === 1
+16:07:48.180 [main] INFO io...sequence.FluxGenerateExample1 -- value === 2
+16:07:48.180 [main] INFO io...sequence.FluxGenerateExample1 -- value === 3
+16:07:48.180 [main] INFO io...sequence.FluxGenerateExample1 -- value === 4
+16:07:48.180 [main] INFO io...sequence.FluxGenerateExample1 -- value === 5
+16:07:48.180 [main] INFO io...sequence.FluxGenerateExample1 -- value === 6
+16:07:48.180 [main] INFO io...sequence.FluxGenerateExample1 -- value === 7
+16:07:48.180 [main] INFO io...sequence.FluxGenerateExample1 -- value === 8
+16:07:48.180 [main] INFO io...sequence.FluxGenerateExample1 -- value === 9
+16:07:48.180 [main] INFO io...sequence.FluxGenerateExample1 -- complete !!
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+#### 2\) sink.next()를 두번 호출하면? 에러발생
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.sequence;
+
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class FluxGenerateExample2 {
+  public static void main(String[] args) {
+    Flux.generate(
+        () -> 0,
+        (state, sink) -> {
+          sink.next(state);
+          sink.next(state);
+          if(state == 9) sink.complete();
+
+          return state + 1;
+        }
+    ).subscribe(
+        v -> { log.info("value === " + v); },
+        error -> { log.error("error === " + error); },
+        () -> { log.info("complete"); }
+    );
+  }
+}
+```
+
+<br/>
+
+
+
+generate 에서 sink 객체를 이용해서 next() 함수를 통해 onNext 이벤트를 두번 호출해보면 에러가 나는 것을 확인 가능합니다.<br/>
+
+
+
+출력결과
+
+```plain
+16:14:41.992 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxGenerateExample2 -- value === 0
+16:14:41.994 [main] ERROR io.chagchagchag.example.foobar.spring_webflux.sequence.FluxGenerateExample2 -- error === java.lang.IllegalStateException: More than one call to onNext
+
+Process finished with exit code 0
+```
 
 <br/>
 
@@ -298,11 +489,179 @@ Flux.from 으로 시작하는 함수들은 아래와 같습니다.
 
 ### Flux.create()
 
+[Flux.java(github)](https://github.com/reactor/reactor-core/blob/main/reactor-core/src/main/java/reactor/core/publisher/Flux.java) 내에 선언된 create() 메서드는 아래와 같습니다.
+
+```java
+public abstract class Flux<T> implements CorePublisher<T>{
+    // ...
+    public static <T> Flux<T> create(Consumer<? super FluxSink<T>> emitter) {
+	    return create(emitter, OverflowStrategy.BUFFER);
+    }
+    // ...
+}
+```
+
+<br/>
+
+Flux.craete() 는 Flux 를 비동기적으로 생성합니다. 중간에 있는 인자를 보면 FluxSink 가 Consumer 의 인자로 되는 것을 알 수 있습니다. 이 FluxSink 를 이용해서 next(), error(), complete() 메서드를 호출해서 Subscriber 에게 onNext, onError, onComplete 신호를 발생시킬 수 있습니다.<br/>
+
+위에서 살펴본 Flux.generate() 에서 사용하던 SynchronousSink 와는 다르게 여러번 next() 를 호출하는 것이 가능합니다. 그리고 **Flux.create() 는 여러 스레드에서 동시에 호출가능**합니다.<br/>
+
+예제
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.sequence;
+
+import java.util.concurrent.CompletableFuture;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class FluxCreateExample {
+  @SneakyThrows
+  public static void main(String[] args) {
+    Flux.create(fluxSink -> {
+      var task1 = CompletableFuture.runAsync(() -> {
+        for (int i=0; i<5; i++){
+          fluxSink.next(i);
+        }
+      });
+
+      var task2 = CompletableFuture.runAsync(() -> {
+        for (int i=5; i<10; i++){
+          fluxSink.next(i);
+        }
+      });
+
+      CompletableFuture.allOf(task1, task2)
+          .thenRun(fluxSink::complete);
+    }).subscribe(
+        v -> {log.info("value === " + v);},
+        error -> {log.error("error === " + error);},
+        () -> {log.info("complete");}
+    );
+
+    Thread.sleep(1000);
+  }
+}
+```
+
+<br/>
+
+
+
+0\~4 까지의 숫자를 sink.next 하는 스레드, 5 \~ 9 까지의 숫자를 sink.next 하는 스레드 이렇게 두개의 스레드를 이용해서 sink.next 를 수행하며, CompletableFuture.allOf 를 통해서 두 개의 CompletableFuture 객체 task1, task2 작업이 끝난 시점에 fluxSink 객체를 이용해서 Subscriber 에게 complete 신호를 내보냅니다.<br/>
+
+
+
+출력결과<br/>
+
+```plain
+16:24:55.472 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 0
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 5
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 6
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 7
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 8
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 9
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 1
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 2
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 3
+16:24:55.474 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- value === 4
+16:24:55.475 [ForkJoinPool.commonPool-worker-1] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxCreateExample -- complete
+
+Process finished with exit code 0
+```
+
 <br/>
 
 
 
 ### Flux.handle()
+
+[Flux.java(github)](https://github.com/reactor/reactor-core/blob/main/reactor-core/src/main/java/reactor/core/publisher/Flux.java) 내에 선언된 handle() 메서드는 아래와 같습니다.
+
+```java
+public abstract class Flux<T> implements CorePublisher<T>{
+    // ...
+    public final <R> Flux<R> handle(BiConsumer<? super T, SynchronousSink<R>> handler) {
+		if (this instanceof Fuseable) {
+			return onAssembly(new FluxHandleFuseable<>(this, handler));
+		}
+		return onAssembly(new FluxHandle<>(this, handler));
+	}
+    // ...
+}
+```
+
+<br/>
+
+
+
+Flux.handle() 메서드는 현재 존재하는 source 에 대해 handle 작업을 처리하는 함수입니다. 위 코드에서 `handler` 라는 BiConcumer 의 인자값에 대한 설명은 아래와 같습니다.<br/>
+
+`? super T`
+
+- source 에서 제공하는 데이터흐름에 대한 각 요소를 의미하는 item 입니다.
+
+`SynchronousSink<R>`
+
+- sink 의 next 연산을 이용해서 현재 주어진 item 을 전달할지 말지 결정합니다.
+
+<br/>
+
+
+
+source 의 item 을 필터링 하는 등 interceptor 같은 역할을 하게끔 구현가능합니다.<br/>
+
+<br/>
+
+
+
+예제
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.sequence;
+
+import java.util.stream.IntStream;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class FluxHandleExample {
+  public static void main(String[] args) {
+    Flux.fromStream(IntStream.range(0,11).boxed())
+        .handle((v, sink) -> {
+          if(v%2 == 0) sink.next(v);
+        }).subscribe(
+            v -> {log.info("value === " + v);},
+            error -> {log.error("error === " + error);},
+            () -> {log.info("complete");}
+        );
+  }
+}
+
+```
+
+
+
+짝수 숫자에 대해서만 다음으로 넘어갈 수 있도록 sink 를 이용해서 next() 함수를 호출해서 Subscriber 에게 onNext 신호를 방출합니다.<br/>
+
+
+
+출력결과
+
+```plain
+16:37:34.735 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- value === 0
+16:37:34.737 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- value === 2
+16:37:34.737 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- value === 4
+16:37:34.737 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- value === 6
+16:37:34.737 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- value === 8
+16:37:34.737 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- value === 10
+16:37:34.738 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.FluxHandleExample -- complete
+
+Process finished with exit code 0
+```
 
 <br/>
 
