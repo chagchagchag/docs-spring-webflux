@@ -1,3 +1,119 @@
 ## Reactor 프로그래밍 (스압 주의)
 
+Spring Webflux 는 pivotal 사에서 개발한 project reactor 를 기반으로 한 서버 애플리케이션을 개발하기 위한 Web 프레임워크입니다.<br/>
+
+
+
+## Flux, Mono
+
+> 참고
+>
+> - Flux : [projectreactor.io - Flux](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html)
+> - Mono : [projectreactor.io - Mono](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html)
+
+
+
+- Flux : 
+  - Java 의 List 와 유사한 데이터의 흐름입니다. 두개 이상의 데이터의 흐름입니다.
+  - [projectreactor.io - Flux](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html) 을 보면 알 수 있듯 Publisher 를 implements 한 클래스이기에 자료구조라기보다는, 데이터의 흐름이라는 사실을 기억해주시기 바랍니다.
+- Mono : 
+  - 하나만 존재하는 데이터를 의미합니다.
+  - [projectreactor.io - Mono](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html) 을 보면 알 수 있듯 Publisher 를 implements 한 클래스이기에 자료구조라기보다는 데이터의 흐름이라는 사실을 기억해주시기 바랍니다.
+
+<br/>
+
+
+
+Flux 하나만 쓰면 될것 같은데 Mono 가 존재하는 이유에 대해 생각이 들 수 있습니다. Mono 라는 자료형이 존재하는 것으로 인한 장점은 아래와 같습니다.
+
+- 하나만 존재하는 데이터의 흐름(Response, Count 결과값 등) 일 경우 onNext 이후에 바로 onComplete 를 하면 되기 때문에 구현이 더 명확해지게 됩니다.
+- Mono 라는 Publisher 를 받는 Subscriber 측 역시 1개의 요소만 처리해야 한다는 사실을 알 수 있기 때문에 조금 더 구현이 명확해집니다.
+
+<br/>
+
+
+
+## sequence
+
+여러가지 다양한 sequence 생성<br/>
+
+
+
+## subscribe(), Subscriber
+
+<br/>
+
+
+
+## delayElements()
+
+<br/>
+
+
+
+## Error 
+
+<br/>
+
+
+
+## concat(), merge(), mergeSequential()
+
+<br/>
+
+
+
+## defer()
+
+<br/>
+
+
+
+## defer() 를 flatMap() 으로
+
+flatMap() 에서 Supplier 동작을 하려 할 때
+
+<br/>
+
+
+
+## 다양한 함수들
+
+- map(), mapNotNull()
+- `doOn---()`
+- flatMap()
+- filter()
+- take(), takeLast()
+- skip(), skipLast()
+- collectList()
+- cache()
+
+<br/>
+
+
+
+## Scheduler, Thread
+
+- ImmediateScheduler
+- SingleScheduler
+- ParallelScheduler
+- BoundedElasticScheduler
+
+<br/>
+
+
+
+## Context
+
+Context 는 파이프라인 내부의 어디에서든 접근 가능한 key, value 저장소입니다. subscribeOn, publishOn 등으로 인해 실행되는 스레드가 달라질 때 Context 를 통해서 특정 key 에 대한 value 를 조회 또는 수정할 수 있습니다.  Map 과 유사한 형식이며, Context 의 종류로는 읽기전용인 ContextView, 쓰기가능한 Context 가 있습니다.
+
+- contextWrite() : 컨텍스트 쓰기
+- contextView() : 컨텍스트 읽기
+- deferContextual() 
+
+<br/>
+
+
+
+
 
