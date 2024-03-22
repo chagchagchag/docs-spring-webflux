@@ -35,7 +35,276 @@ Flux 하나만 쓰면 될것 같은데 Mono 가 존재하는 이유에 대해 �
 
 ## sequence
 
-여러가지 다양한 sequence 생성<br/>
+Mono,Flux 를 이용해서 다양한 데이터의 흐름을 만들어봅니다. Mono, Flux 를 통해서 만들어내는 데이터의 흐름을 일반적으로 `sequence` 라고 부릅니다.<br/>
+
+<br/>
+
+
+
+### just
+
+Mono.just(), Flux.just() 메서드를 사용하면 시퀀스를 생성할 수 있습니다. 자세한 내용은 예제와 출력결과를 확인해주시기 바랍니다.
+
+`JustExample.java`
+
+```java
+package io...sequence;
+
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+public class JustExample {
+  public static void main(String[] args) {
+    Mono.just("안녕하세요")
+        .subscribe(v -> {
+          log.info(">>> {}", v);
+        });
+
+    Flux.just("MSFT", "NVDA", "SMCI")
+        .subscribe(v -> {
+          log.info(">>> {}", v);
+        });
+  }
+}
+```
+
+<br/>
+
+출력결과
+
+```plain
+15:18:07.066 [main] INFO io...sequence.JustExample -- >>> 안녕하세요
+15:18:07.228 [main] INFO io...sequence.JustExample -- >>> MSFT
+15:18:07.228 [main] INFO io...sequence.JustExample -- >>> NVDA
+15:18:07.228 [main] INFO io...sequence.JustExample -- >>> SMCI
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+### error
+
+Mono.error, Flux.error 를 사용하면 subscriber 에게 onError 이벤트를 전달할 수 있습니다.<br/>
+
+반드시 **"subscriber 에게 onError 이벤트를 전달한다."**라는 의미를 꼭 기억해주셨으면 합니다.<br/>
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.sequence;
+
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+public class ErrorExample {
+
+  public static void main(String[] args) {
+    Mono.error(new IllegalArgumentException("어머, 에러에요"))
+        .subscribe(
+            v -> {log.info("v ::: " + v);},
+            error -> {log.error("error ::: " + error);}
+        );
+
+    Flux.error(new IllegalArgumentException("어머, 에러에요"))
+        .subscribe(
+            v -> {log.info("value ::: " + v);},
+            error -> {log.error("error ::: " + error);}
+        );
+  }
+}
+
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+15:27:13.589 [main] ERROR io.chagchagchag.example.foobar.spring_webflux.sequence.ErrorExample -- error ::: java.lang.IllegalArgumentException: 어머, 에러에요
+15:27:13.699 [main] ERROR io.chagchagchag.example.foobar.spring_webflux.sequence.ErrorExample -- error ::: java.lang.IllegalArgumentException: 어머, 에러에요
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+### empty
+
+Mono.empty, Flux.empty 를 써보는 예제입니다. empty 를 사용하면 Mono 또는 Flux 에게 onComplete 이벤트만 전달되게 됩니다.
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.sequence;
+
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+public class EmptyExample {
+  public static void main(String[] args) {
+    Mono.empty()
+        .subscribe(
+            v -> {log.info("value === " +v);},
+            null,
+            () -> {log.info("complete");}
+        );
+
+    Flux.empty()
+        .subscribe(
+            v -> {log.info("value === " + v);},
+            null,
+            () -> {log.info("complete");}
+        );
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+15:31:46.735 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.EmptyExample -- complete
+15:31:46.792 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.EmptyExample -- complete
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+### Mono.fromOOO()
+
+Mono.from 으로 시작하는 함수들은 아래와 같습니다.
+
+- Mono.fromCallable
+  - Callable 함수형 인터페이스를 람다로 실행 후 반환값은 onNext 로 전달됩니다.
+- Mono.formFuture
+  - Future 를 받아서 done 상태가 되었을 때 반환값을 onNext 로 Subscriber 에 전달합니다.
+- Mono.fromSupplier
+  - Supplier 함수형 인터페이스를 람다로 실행 후 반환값은 onNext 로 Subscriber 에 전달합니다.
+- Mono.fromRunnable
+  - Runnable 함수형 인터페이스를 람다로 실행 후, onComplete 를 Subscriber 에 전달합니다.
+
+<br/>
+
+
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.sequence;
+
+import java.util.concurrent.CompletableFuture;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+public class MonoFromExample {
+  public static void main(String[] args) {
+    Mono.fromCallable(() -> {
+      return "삼성전자";
+    }).subscribe(v -> {
+      log.info("fromCallable 에서 받은 value === " + v);
+    });
+
+    Mono.fromFuture(CompletableFuture.supplyAsync(() -> {
+      return "삼성전자";
+    })).subscribe(v -> {
+      log.info("fromFuture 로부터 받은 value === " + v);
+    });
+
+    Mono.fromSupplier(() -> {
+      return "삼성전자";
+    }).subscribe(v -> {
+      log.info("fromSupplier 로부터 받은 value === " + v);
+    });
+
+    Mono.fromRunnable(() -> {
+      log.info("do some runnable");
+    }).subscribe(
+        null, null, () -> {log.info("fromRunnable Complete.");}
+    );
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+15:45:03.043 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.MonoFromExample -- fromCallable 에서 받은 value === 삼성전자
+15:45:03.049 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.MonoFromExample -- fromFuture 로부터 받은 value === 삼성전자
+15:45:03.051 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.MonoFromExample -- fromSupplier 로부터 받은 value === 삼성전자
+15:45:03.052 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.MonoFromExample -- do some runnable
+15:45:03.052 [main] INFO io.chagchagchag.example.foobar.spring_webflux.sequence.MonoFromExample -- fromRunnable Complete.
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+### Flux.fromOOO()
+
+Flux.from 으로 시작하는 함수들은 아래와 같습니다.
+
+- Flux.fromIterable
+- Flux.fromStream
+- Flux.fromArray
+- Flux.range(start, n)
+
+
+
+```java
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+```
+
+<br/>
+
+
+
+### Flux.generate
+
+#### 1) next()
+
+#### 2\) next()를 두번 호출하면? 에러발생
+
+<br/>
+
+
+
+### Flux.create()
+
+<br/>
+
+
+
+### Flux.handle()
+
+<br/>
 
 
 
