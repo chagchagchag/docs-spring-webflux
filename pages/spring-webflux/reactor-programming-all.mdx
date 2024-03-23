@@ -1101,7 +1101,9 @@ Process finished with exit code 0
 
 onNext 이벤트 발행 시에 최소 delay 만큼의 간격을 두어서 delay 를 수행합니다. 만약 onNext 이벤트가 발행된 후에 delay 보다 더 늦게 다음 onNext 이벤트가 전달되면 바로 전파됩니다.
 
-![](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/doc-files/marbles/flux.svg)
+![](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/doc-files/marbles/delayElements.svg)
+
+> 출처 : https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html#delayElements-java.time.Duration-
 
 <br/>
 
@@ -1374,7 +1376,7 @@ Publisher 를 다른 Publisher 와 합치는 연산을 수행하는 함수입니
 
 ![](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/doc-files/marbles/mergeSequentialVarSources.svg)
 
-
+> 출처 : https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html#mergeSequential-org.reactivestreams.Publisher...-
 
 <br/>
 
@@ -1429,12 +1431,6 @@ public class MergeSequentialExample1 {
 
 Process finished with exit code 0
 ```
-
-<br/>
-
-
-
-## Error 
 
 <br/>
 
@@ -1608,39 +1604,313 @@ Process finished with exit code 0
 
 ### filter()
 
+Stream 에서의 filter 와 유사한 연산을 합니다. 
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.various_functions;
+
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class Filter_Example {
+  public static void main(String[] args) {
+    Flux.range(1,30)
+        .filter(v -> v%3 == 0)
+        .doOnNext(v -> {
+          log.info("doOnNext : " + v);
+        })
+        .subscribe();
+  }
+}
+```
+
+<br/>
+
+출력결과
+
+```plain
+11:21:19.135 [main] INFO io...various_functions.Filter_Example -- doOnNext : 3
+11:21:19.137 [main] INFO io...various_functions.Filter_Example -- doOnNext : 6
+11:21:19.137 [main] INFO io...various_functions.Filter_Example -- doOnNext : 9
+11:21:19.137 [main] INFO io...various_functions.Filter_Example -- doOnNext : 12
+11:21:19.137 [main] INFO io...various_functions.Filter_Example -- doOnNext : 15
+11:21:19.137 [main] INFO io...various_functions.Filter_Example -- doOnNext : 18
+11:21:19.137 [main] INFO io...various_functions.Filter_Example -- doOnNext : 21
+11:21:19.137 [main] INFO io...various_functions.Filter_Example -- doOnNext : 24
+11:21:19.137 [main] INFO io...various_functions.Filter_Example -- doOnNext : 27
+11:21:19.137 [main] INFO io...various_functions.Filter_Example -- doOnNext : 30
+
+Process finished with exit code 0
+```
+
+<br/>
 
 
 
+### take(n), takeLast(n)
 
-### take(), takeLast()
+take(n)
+
+- 대략 n 개 까지 onNext 이벤트를 전파합니다. n개에 도달하면 onComplete 이벤트가 발생합니다.
+
+takeLast(n)
+
+- onComplete 이벤트가 발생하기 직전의 n개의 아이템만 onNext 이벤트를 전파합니다.
 
 
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.various_functions;
+
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class Take_TakeLast_Example {
+  @SneakyThrows
+  public static void main(String[] args) {
+    Flux.range(1,100000)
+        .take(5)
+        .doOnNext(v -> {
+          log.info("taken item = " + v);
+        })
+        .subscribe();
+
+    Flux.range(1, 100)
+        .takeLast(10)
+        .doOnNext(v -> {
+          log.info("taken item = " + v);
+        })
+        .subscribe();
+
+    Thread.sleep(2000);
+  }
+}
+```
+
+<br/>
+
+출력결과
+
+```plain
+11:26:56.569 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 1
+11:26:56.572 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 2
+11:26:56.572 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 3
+11:26:56.572 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 4
+11:26:56.572 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 5
+11:26:56.575 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 91
+11:26:56.575 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 92
+11:26:56.575 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 93
+11:26:56.575 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 94
+11:26:56.575 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 95
+11:26:56.575 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 96
+11:26:56.575 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 97
+11:26:56.575 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 98
+11:26:56.575 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 99
+11:26:56.575 [main] INFO io...various_functions.Take_TakeLast_Example -- taken item = 100
+
+Process finished with exit code 0
+```
+
+<br/>
 
 
 
 ### skip(), skipLast()
 
+```java
+package io.chagchagchag.example.foobar.spring_webflux.various_functions;
 
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class Skip_SkipLast_Example {
+  @SneakyThrows
+  public static void main(String[] args) {
+    // 처음부터 n 번째까지를 스킵한 결과를 순회
+    Flux.range(1, 10)
+        .skip(3)
+        .doOnNext(v -> {
+          log.info("skip 하지 않은 요소 : " + v);
+        })
+        .subscribe();
+    // 맨 끝에서부터 n 개를 skip 한 결과를 순회
+    Flux.range(1, 1000)
+        .skipLast(997)
+        .doOnNext(v -> {
+          log.info("skip 하지 않은 요소 " + v);
+        })
+        .subscribe();
+
+    Thread.sleep(2000);
+  }
+}
+```
+
+<br/>
+
+출력결과
+
+```plain
+11:32:33.028 [main] INFO io...various_functions.Skip_SkipLast_Example -- skip 하지 않은 요소 : 4
+11:32:33.030 [main] INFO io...various_functions.Skip_SkipLast_Example -- skip 하지 않은 요소 : 5
+11:32:33.030 [main] INFO io...various_functions.Skip_SkipLast_Example -- skip 하지 않은 요소 : 6
+11:32:33.030 [main] INFO io...various_functions.Skip_SkipLast_Example -- skip 하지 않은 요소 : 7
+11:32:33.030 [main] INFO io...various_functions.Skip_SkipLast_Example -- skip 하지 않은 요소 : 8
+11:32:33.030 [main] INFO io...various_functions.Skip_SkipLast_Example -- skip 하지 않은 요소 : 9
+11:32:33.030 [main] INFO io...various_functions.Skip_SkipLast_Example -- skip 하지 않은 요소 : 10
+11:32:33.032 [main] INFO io...various_functions.Skip_SkipLast_Example -- skip 하지 않은 요소 1
+11:32:33.032 [main] INFO io...various_functions.Skip_SkipLast_Example -- skip 하지 않은 요소 2
+11:32:33.032 [main] INFO io...various_functions.Skip_SkipLast_Example -- skip 하지 않은 요소 3
+
+Process finished with exit code 0
+```
+
+<br/>
 
 
 
 ### collectList()
 
+![](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/doc-files/marbles/collectList.svg)
 
+> 참고 : https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Flux.html#collectList--
+
+<br/>
+
+onComplete 이벤트가 발생하기 전까지 내부에 item 을 저장해둡니다. 그리고 시퀀스가 완료(onComplete)될 때 Mono 에 의해 방출되는 List 로 수집합니다.<br/>
+
+시퀀스가 비어있으면 비어있는 List 가 방출됩니다.<br/>
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.various_functions;
+
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class CollectList_Example {
+  public static void main(String[] args) {
+    Flux.range(1, 10)
+        .doOnNext(v -> {
+          log.info("(before) doOnNext >> " + v);
+        })
+        .collectList()
+        .doOnNext(v -> {
+          log.info("(after) doOnNext >> " + v);
+        })
+        .subscribe();
+  }
+}
+```
+
+<br/>
+
+출력결과
+
+```plain
+12:16:45.442 [main] INFO io...various_functions.CollectList_Example -- (before) doOnNext >> 1
+12:16:45.444 [main] INFO io...various_functions.CollectList_Example -- (before) doOnNext >> 2
+12:16:45.444 [main] INFO io...various_functions.CollectList_Example -- (before) doOnNext >> 3
+12:16:45.444 [main] INFO io...various_functions.CollectList_Example -- (before) doOnNext >> 4
+12:16:45.444 [main] INFO io...various_functions.CollectList_Example -- (before) doOnNext >> 5
+12:16:45.444 [main] INFO io...various_functions.CollectList_Example -- (before) doOnNext >> 6
+12:16:45.444 [main] INFO io...various_functions.CollectList_Example -- (before) doOnNext >> 7
+12:16:45.444 [main] INFO io...various_functions.CollectList_Example -- (before) doOnNext >> 8
+12:16:45.444 [main] INFO io...various_functions.CollectList_Example -- (before) doOnNext >> 9
+12:16:45.444 [main] INFO io...various_functions.CollectList_Example -- (before) doOnNext >> 10
+12:16:45.444 [main] INFO io...various_functions.CollectList_Example -- (after) doOnNext >> [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+Process finished with exit code 0
+```
+
+<br/>
 
 
 
 ### cache()
 
+처음 subscribe 시에만 publisher 를 실행하고, 이후 subscribe 시에는 저장된 이벤트들을 흘려보내줍니다.
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.various_functions;
+
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+
+@Slf4j
+public class CacheExample {
+  public static void main(String[] args) {
+    // (1)
+    Flux<Object> flux = Flux.create(fluxSink -> {
+      for(int i=0; i<3; i++){
+        fluxSink.next(i);
+        log.info("(created) " + i);
+      }
+      log.info("sink next 완료 (at Publisher)");
+      fluxSink.complete();
+    }).cache();
+
+    // (2)
+    flux.subscribe(
+        v -> {log.info("v ::: " + v);},
+        null,
+        () -> {log.info("complete");}
+    );
+
+    // (3)
+    flux.subscribe(
+        v -> {log.info("v ::: " + v);},
+        null,
+        () -> {log.info("complete");}
+    );
+  }
+}
+```
 
 
 
+(1)
+
+- (1) 에서 Flux.create 를 수행한 것은 subscribe 를 하지 않으면 아무 일도 일어나지 않습니다.
+- (1) 의 구문은 단순한 `식(Statement)` 일 뿐이고, Subscribe 할 때 Publisher 의 구독이 시작됩니다.
+
+(2)
+
+- (1) 을 subscribe() 해서  첫번째 Subscribe 를 수행하는데, 이때 Flux 에 의해 Publisher 의 아이템들이 생성됩니다. 
+- (1) 에서 Flux.create() 한 후 마무리로 cache() 를 했기 때문에 내부에 결과가 저장됩니다.
+
+(3)
+
+- (1) 을 subscribe() 해서 Flux 를 새로 create 하지 않고, (2) 에서 저장해둔 결과를 그대로 읽어들입니다.
+- 따라서 Sink 이벤트 없이 구독만 하기에 onNext, onComplete 이벤트만 발생합니다.
+
+<br/>
 
 
 
+출력결과
 
+```plain
+12:31:10.022 [main] INFO io...various_functions.CacheExample -- v ::: 0
+12:31:10.026 [main] INFO io...various_functions.CacheExample -- (created) 0
+12:31:10.027 [main] INFO io...various_functions.CacheExample -- v ::: 1
+12:31:10.027 [main] INFO io...various_functions.CacheExample -- (created) 1
+12:31:10.027 [main] INFO io...various_functions.CacheExample -- v ::: 2
+12:31:10.027 [main] INFO io...various_functions.CacheExample -- (created) 2
+12:31:10.027 [main] INFO io...various_functions.CacheExample -- sink next 완료 (at Publisher)
+12:31:10.027 [main] INFO io...various_functions.CacheExample -- complete
+12:31:10.028 [main] INFO io...various_functions.CacheExample -- v ::: 0
+12:31:10.028 [main] INFO io...various_functions.CacheExample -- v ::: 1
+12:31:10.028 [main] INFO io...various_functions.CacheExample -- v ::: 2
+12:31:10.028 [main] INFO io...various_functions.CacheExample -- complete
 
+Process finished with exit code 0
+```
 
-
-
+<br/>
 
