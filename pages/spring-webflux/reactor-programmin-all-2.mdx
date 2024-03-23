@@ -1,0 +1,43 @@
+## Reactor 프로그래밍 2 (Thread, Scheduler, Context, defer())
+
+## Scheduler, Thread
+
+- ImmediateScheduler
+- SingleScheduler
+- ParallelScheduler
+- BoundedElasticScheduler
+
+<br/>
+
+
+
+## Context
+
+Context 는 파이프라인 내부의 어디에서든 접근 가능한 key, value 저장소입니다. subscribeOn, publishOn 등으로 인해 실행되는 스레드가 달라질 때 Context 를 통해서 특정 key 에 대한 value 를 조회 또는 수정할 수 있습니다.  Map 과 유사한 형식이며, Context 의 종류로는 읽기전용인 ContextView, 쓰기가능한 Context 가 있습니다.
+
+- contextWrite() : 컨텍스트 쓰기
+- contextView() : 컨텍스트 읽기
+- deferContextual() 
+
+<br/>
+
+
+
+## defer()
+
+<br/>
+
+
+
+## defer() 를 flatMap() 으로
+
+flatMap() 에서 Supplier 동작을 하려 할 때
+
+<br/>
+
+
+
+
+
+
+
