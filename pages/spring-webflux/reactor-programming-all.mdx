@@ -50,8 +50,6 @@ Mono.just(), Flux.just() 메서드를 사용하면 시퀀스를 생성할 수 �
 `JustExample.java`
 
 ```java
-package io...sequence;
-
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -96,8 +94,6 @@ Mono.error, Flux.error 를 사용하면 subscriber 에게 onError 이벤트를 �
 반드시 **"subscriber 에게 onError 이벤트를 전달한다."**라는 의미를 꼭 기억해주셨으면 합니다.<br/>
 
 ```java
-package io...sequence;
-
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -205,8 +201,6 @@ Mono.from 으로 시작하는 함수들은 아래와 같습니다.
 
 
 ```java
-package io...sequence;
-
 import java.util.concurrent.CompletableFuture;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Mono;
@@ -273,8 +267,6 @@ Flux.from 으로 시작하는 함수들은 아래와 같습니다.
 
 
 ```java
-package io...sequence;
-
 import java.util.List;
 import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
@@ -381,8 +373,6 @@ generator
 #### 1) sink.next()
 
 ```java
-package io...sequence;
-
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 
@@ -442,8 +432,6 @@ Process finished with exit code 0
 #### 2\) sink.next()를 두번 호출하면? 에러발생
 
 ```java
-package io.chagchagchag...sequence;
-
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 
@@ -512,8 +500,6 @@ Flux.craete() 는 Flux 를 비동기적으로 생성합니다. 중간에 있는 
 예제
 
 ```java
-package io.chagchagchag...sequence;
-
 import java.util.concurrent.CompletableFuture;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -623,8 +609,6 @@ source 의 item 을 필터링 하는 등 interceptor 같은 역할을 하게끔 
 예제
 
 ```java
-package io.chagchagchag...sequence;
-
 import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -782,8 +766,6 @@ Process finished with exit code 0
 정상일때, 에러일때, onComplete 일때 어떤것을 할지, initialContext 를 정의합니다.
 
 ```java
-package io.chagchagchag...subscribe;
-
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
@@ -999,8 +981,6 @@ BasePublisher 는 위에서 살펴봤던 request(n) 과 같은 backpressure 를 
 BasePublisher 는 위에서 살펴봤던 request(n) 과 같은 backpressure 를 관리하는 함수를 조금 더 다양하게 사용할 수 있는 함수 인 buffer(n) 을 제공합니다.
 
 ```java
-package io.chagchagchag...subscribe;
-
 import java.util.List;
 import java.util.stream.IntStream;
 import lombok.extern.slf4j.Slf4j;
@@ -1132,8 +1112,6 @@ onNext 이벤트 발행 시에 최소 delay 만큼의 간격을 두어서 delay 
 for 문 안에서는 10ms 만큼 지연이 발생하고, delayElements 에서는 최소 500ms 만큼 기다려주고 있습니다.
 
 ```java
-package io.chagchagchag...delay_elements;
-
 import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -1197,8 +1175,6 @@ Process finished with exit code 0
 이번에는 for 문안에서 1000ms 를 지정합니다. delayElements 에서는 100ms 를 지정했습니다. 결과는 delayElements 의 100ms 는 최소로 기다려야 하는 시간이기에 for loop 의 1000ms 를 거친 후, delayElements 는 어이쿠 최소로 기다려야 하는 시간(100ms)이 넘어버렸네? 하면서 delayElements 는 넘어가게 됩니다.
 
 ```java
-package io.chagchagchag...delay_elements;
-
 import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -1269,8 +1245,6 @@ Process finished with exit code 0
 그림을 보면 Publisher 두개를 합치는 도중에 각각의 Publiser 의 onNext 연산에 대한 순서가 각각의 요소에 대해 지켜지고 있는 것을 확인 가능합니다.<br/>
 
 ```java
-package io.chagchagchag...concat_merge_mergesequential;
-
 import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -1339,8 +1313,6 @@ Process finished with exit code 0
 <br/>
 
 ```java
-package io.chagchagchag...concat_merge_mergesequential;
-
 import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -1407,8 +1379,6 @@ Publisher 를 다른 Publisher 와 합치는 연산을 수행하는 함수입니
 <br/>
 
 ```java
-package io.chagchagchag...concat_merge_mergesequential;
-
 import java.time.Duration;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -1638,13 +1608,31 @@ Process finished with exit code 0
 
 ### filter()
 
+
+
+
+
 ### take(), takeLast()
+
+
+
+
 
 ### skip(), skipLast()
 
+
+
+
+
 ### collectList()
 
+
+
+
+
 ### cache()
+
+
 
 
 
