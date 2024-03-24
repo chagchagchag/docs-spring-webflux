@@ -757,7 +757,7 @@ Process finished with exit code 0
 
 
 
-### 초기화
+### Context 초기화
 
 #### Flux::subscribe(a,b,c,d) 에 initialContext 전달
 
@@ -986,11 +986,103 @@ Process finished with exit code 0
 
 
 
+## Mono.defer()
+
+[Mono.defer()](https://github.com/reactor/reactor-core/blob/main/reactor-core/src/main/java/reactor/core/publisher/Mono.java#L218) 는  아래와 같이 정의되어 있습니다.
+
+```java
+public abstract class Mono<T> implements CorePublisher<T> {
+    // ...
+    
+	public static <T> Mono<T> defer(Supplier<? extends Mono<? extends T>> supplier) {
+		return onAssembly(new MonoDefer<>(supplier));
+	}
+    
+    // ...
+}
+```
+
+<br/>
+
+인자값으로 Supplier 를 받고 있습니다. 이 말은 값이 아닌 식을 전달받는다는 의미이고 지연된(lazy) 초기화가 가능하다는 의미가 됩니다. <br/>
+
+Cold Publisher 기반의 식은 실행중인 스레드는 Cold Publisher 를 구독할 때에만 Cold Publisher 에 대해 연산(evaluate)을 하게 되는데, Hot Publisher 와 비교해보면, Hot Publisher 는 구독하기 전에 이미 연산(evaluate)을 즉시합니다. Hot Publisher 와 같이 즉시 연산을 하는 것을 Eager Evaluation 이라고 이야기합니다.<br/>
+
+Mono.defer() 는 Cold Publisher 연산을 수행합니다.<br/>
+
+Mono.defer() 내에 Supplier 를 건네주었다는 것은 그 Supplier 를 지연된 처리를 할 것이며, 별도의 다른 Publisher 를 defer() 를 통해 생성하고 이것을 현재 Subscriber 로 구독하는 작업을 통해 그 Supplier 를 실행시키겠다는 의미가 됩니다.<br/>
 
 
-### 
+
+![](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/doc-files/marbles/deferForMono.svg)
+
+> 출처 : https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html#defer-java.util.function.Supplier-
+
+위 그림을 보면, Subscriber 에게 Mono.defer 의 실행연산이 박스에 담긴채로 넘어가는 것이 강조되어 표현되어 있습니다. <br/>
 
 
+
+아래는 비교적 단순한 Mono.defer() 의 사용법을 알 수 있는 예제입니다.
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.defer;
+
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+public class MonoDefer_Example {
+  public static void main(String[] args) {
+    Mono.defer(() -> {
+      return Mono.just("안녕하세요");
+    }).subscribe(message -> {
+      log.info("message == " + message);
+    });
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+10:41:14.477 [main] INFO io...defer.MonoDefer_Example -- message == 안녕하세요
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+### Mono.defer() 를 flatMap() 으로
+
+하나의 Publisher 흐름에서 map() 등의 연산을 통해 Mono.defer() 를 호출하고 있을 때, 첫번째 Mono.defer() 내의 Supplier 람다바디 안에서 또 다시 별도의 Mono Publisher 를 생성하고 이 Publisher 를 전달해주려 할 경우가 있습니다.<br/>
+
+I/O 처리 작업, Database 연산 들 처럼 응답지연이 많은 현대적인 애플리케이션의 특성상 이런 작업들이 자주 발생합니다. 이 경우 아래의 예제처럼 flatMap() 으로 Publisher 를 풀어서 처리할 수 있습니다.<br/>
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.defer;
+
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+public class MonoDeferFlatMap_Example {
+  public static void main(String[] args) {
+    var userName = "Mono.defer";
+    Mono.just(userName)
+        .flatMap(v -> Mono.defer(() -> {
+          return Mono.just(userName + "님, 안녕하세요. 반가워요");
+        })).subscribe(v -> {
+          log.info("message === " + v);
+        });
+  }
+}
+```
 
 
 
@@ -998,19 +1090,69 @@ Process finished with exit code 0
 
 
 
-## defer()
+출력결과
+
+```plain
+11:03:00.426 [main] INFO io...defer.MonoDeferFlatMap_Example -- message === Mono.defer님, 안녕하세요. 반가워요
+
+Process finished with exit code 0
+```
 
 <br/>
 
 
 
-## defer() 를 flatMap() 으로
+### Mono.deferContextual(Function\<T,R\>)
 
-flatMap() 에서 Supplier 동작을 하려 할 때
+Mono.deferContextual(Function) 의 정확한 입출력, 반환형 명세는 Mono.deferContextual(Fucntion\<ContextView, Mono\<T\>\>) 입니다.<br/>
+
+
+
+> 참고 : [Mono.deferContextual(Funciton\<ContextView, Mono\>)](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/Mono.html#deferContextual-java.util.function.Function-)
+
+![](https://projectreactor.io/docs/core/release/api/reactor/core/publisher/doc-files/marbles/deferForMono.svg)
+
+<br/>
+
+Mono.deferContexetual() 은 ContextView 를 인자로 받아서 Mono\<T\> 로 변환해서 반환하는 Function 을 인자로 받습니다. 아래 예제에서 flatMap 을 사용한 이유는 Flux 를 Mono 로 바꾼 후 conetxtWrite() 를 수행하기 위해서 flatMap 을 사용했습니다. 실제로 Subscriber 가 subscribe() 할때 context 를 읽는 순서는 역순인 맨 뒤에서부터 시작합니다. 
+
+```java
+package io.chagchagchag.example.foobar.spring_webflux.context;
+
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
+
+@Slf4j
+public class ContextRead_MonoDeferContextual_Example {
+  public static void main(String[] args) {
+    Flux.just("누구시죠")
+        .flatMap(v -> {
+          return Mono.deferContextual(contextView -> {
+            String message = contextView.get("message");
+            log.info("message ::: " + message);
+            return Mono.just(v);
+          });
+        })
+        .contextWrite(context -> context.put("message", "안녕하세요"))
+        .subscribe();
+  }
+}
+```
 
 <br/>
 
 
+
+출력결과
+
+```plain
+23:44:39.279 [main] INFO io...context.ContextRead_MonoDeferContextual_Example -- message ::: 안녕하세요
+
+Process finished with exit code 0
+```
+
+<br/>
 
 
 
