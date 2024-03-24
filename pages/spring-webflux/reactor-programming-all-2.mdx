@@ -1005,7 +1005,7 @@ public abstract class Mono<T> implements CorePublisher<T> {
 
 인자값으로 Supplier 를 받고 있습니다. 이 말은 값이 아닌 식을 전달받는다는 의미이고 지연된(lazy) 초기화가 가능하다는 의미가 됩니다. <br/>
 
-Cold Publisher 기반의 식은 실행중인 스레드는 Cold Publisher 를 구독할 때에만 Cold Publisher 에 대해 연산(evaluate)을 하게 되는데, Hot Publisher 와 비교해보면, Hot Publisher 는 구독하기 전에 이미 연산(evaluate)을 즉시합니다. Hot Publisher 와 같이 즉시 연산을 하는 것을 Eager Evaluation 이라고 이야기합니다.<br/>
+Cold Publisher 는 실행중인 스레드가 Cold Publisher 를 구독할 때에만 Cold Publisher 에 대해 연산(evaluate)을 하게 되는데, 이런 연산을 Lazy Evaluation 이라고 부릅니다. Hot Publisher 와 비교해보면, Hot Publisher 는 구독하기 전에 이미 연산(evaluate)을 즉시해서 데이터를 제공합니다. 이렇게 Hot Publisher 처럼 즉시 연산을 하는 것을 Eager Evaluation 이라고 이야기합니다.<br/>
 
 Mono.defer() 는 Cold Publisher 연산을 수행합니다.<br/>
 
@@ -1152,5 +1152,4 @@ Process finished with exit code 0
 ```
 
 <br/>
-
 
