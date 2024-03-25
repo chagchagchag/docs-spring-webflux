@@ -53,15 +53,6 @@
 
 
 
-### 예제. isDone(), isCancelled(), get(), cancel()
-
-```java
-```
-
-<br/>
-
-
-
 ### Future interface 의 단점
 
 cancel() 과 같은 메서드가 아니라면, 외부에서 future 를 제어할 방법이 없습니다. 또한 get() 메서드의 블로킹 기반의 연산으로 값을 얻어온 후 연산을 처리하며, 비동기적으로 데이터를 처리하려면 프로그래머가 직접 그 코드를 하드코딩해서 만들어야합니다.<br/>
@@ -69,6 +60,67 @@ cancel() 과 같은 메서드가 아니라면, 외부에서 future 를 제어할
 또한 isDone(), isCancelled() 의 경계가 모호함으로 인해 완료되었는지, 에러가 발생했는지를 명확하게 확인하기 쉽지 않다는 단점이 있습니다.
 
 ```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.future;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import lombok.SneakyThrows;
+
+public class Future_Disadvantage_Example1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    Future<String> future1 = getFuture();
+    future1.cancel(true); // 이미 실행 중이라면 Interrupt 한다.
+    assert future1.isDone(); // cancel 했지만, isDone() == true
+
+    Future<String> future2 = getFutureWithException();
+    Exception exception = null;
+    try{
+      future2.get();
+    }
+    catch (Exception e){
+      exception = e;
+    }
+
+    assert future2.isDone();
+    assert exception != null;
+  }
+
+  @SneakyThrows
+  public static Future<String> getFuture(){
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try{
+      return executor.submit(() -> {
+        return "안녕하세요";
+      });
+    }
+    catch (Exception e){
+      e.printStackTrace();
+      throw new RuntimeException(e);
+    }
+    finally {
+      executor.shutdown();
+    }
+  }
+
+  @SneakyThrows
+  public static Future<String> getFutureWithException(){
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try{
+      return executor.submit(() -> {
+        throw new RuntimeException("배고파요");
+      });
+    }
+    catch (Exception e){
+      e.printStackTrace();
+      throw new RuntimeException(e);
+    }
+    finally {
+      executor.shutdown();
+    }
+  }
+}
 ```
 
 <br/>
@@ -76,6 +128,171 @@ cancel() 과 같은 메서드가 아니라면, 외부에서 future 를 제어할
 
 
 반면 CompletableStage 는 thenAsync(), thenCompose(), supplyAsync() 와 같은 메서드를 통해 체이닝을 통해 비동기적인 프로그래밍을 제공합니다. 여기에 대해서는 다음 섹션에서 정리합니다.<br/>
+
+<br/>
+
+
+
+### 예제
+
+#### get()
+
+- **[get](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html#get--)**() 
+  - 작업이 끝날 때 까지 thread 가 block 됩니다.  future 에서 무한 루프나 오랜 시간이 걸릴 경우 thread 가 blocking 상태로 유지됩니다.
+- **[get](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html#get-long-java.util.concurrent.TimeUnit-)**(long timeout, [TimeUnit](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/TimeUnit.html) unit)
+  - timeout 동안 thread 가 block 됩니다. timeout 이 넘어가면 TimeoutException 이 throw 됩니다.
+
+
+
+> 예제의 설명은 주석으로 추가해두었습니다.
+
+```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.future;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class FutureGet_Methods_Example1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    // get()
+    Future<String> future1 = getFutureWithDelay1s();
+    assert !future1.isDone();
+    assert !future1.isCancelled();
+
+    // 블로킹 방식의 동기연산. 값을 얻어옵니다.
+    String result1 = future1.get(); // 1초 소요
+    assert result1.equals("안녕하세요");
+    assert future1.isDone(); // 작업은 완료되었기에 true 를 return
+    assert !future1.isCancelled(); // 취소된 적 없으므로 false 를 return
+
+    // get(timeout, TimeUnit)
+    Future<String> future2 = getFutureWithDelay1s(); // 1초 소요
+    String result2 = future2.get(2000, TimeUnit.MILLISECONDS); // 2초 안에 마무리 되므로 정상수행
+    assert result2.equals("안녕하세요"); // 값을 제대로 받아왔습니다.
+
+    // 이번에는 long running 작업의 timeout 적용 코드
+    Future<String> future3 = getFutureWithDelay1s(); // 1초 소요
+    Exception exception = null; // exception 객체
+    String result3 = null;
+
+    try{
+      result3 = future3.get(10, TimeUnit.MILLISECONDS); // 10ms 안에 마무리 되지 않으므로 TimeoutException throw
+    } catch (Exception e){
+      exception = e;
+    }
+    assert exception != null;
+    assert result3 == null;
+    log.info("exception = " + exception);
+  }
+
+  @SneakyThrows
+  public static Future<String> getFutureWithDelay1s(){
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try{
+      return executor.submit(() -> {
+        Thread.sleep(1000);
+        return "안녕하세요";
+      });
+    }
+    catch (Exception e){
+      e.printStackTrace();
+      throw new RuntimeException(e);
+    }
+    finally {
+      executor.shutdown();
+    }
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+15:05:27.647 [main] INFO io...concurrent.sync_async.future.FutureMethods_Example1 -- exception = java.util.concurrent.TimeoutException
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+#### cancel(), isDone(), isCancelled()
+
+**[cancel](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html#cancel-boolean-)**(boolean mayInterruptIfRunning)
+
+- future 의 작업을 취소합니다.
+- mayInterruptIfRunning 을 false 로 지정하면, 시작하지 않은 작업에 대해서만 취소를 합니다.
+- 취소할 수 없는 상황일 경우(e.g. myInterruptIfRunning 이 false 인데 이미 시작한 작업일 경우)에는 false 를 return 합니다.
+
+**[isDone](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html#isDone--)**()
+
+- isDone() 메서드는 태스크가 취소되든, 완료되었든 끝난 상태라면 true 를 반환하고 진행중이라면 false 를 리턴합니다.
+
+**[isCancelled](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html#isCancelled--)**()
+
+- isCancelled() 메서드는 태스크가 취소된 경우에만 true 를 리턴하고 취소되지 않은 상태인 경우 false 를 리턴합니다.
+
+
+
+> 예제의 설명은 주석으로 추가해두었습니다.
+
+```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.future;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class FutureCancel_Methods_Example1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    Future<String> future1 = getFuture();
+    Boolean isCancelled1 = future1.cancel(true);
+    // mayInterruptIfRunning = true 의 의미 :: 작업이 진행 중이면 Interrupt 하겠다.
+
+    assert future1.isCancelled();
+    assert future1.isDone();
+    assert isCancelled1 == true;
+
+    // 이미 존재하는 Future 를 Cancel
+    Boolean isCancelled2 = future1.cancel(true);
+    assert future1.isCancelled();
+    assert future1.isDone(); // cancel() 된 작업도 isDone() == true 로 간주
+    assert isCancelled2 == false;
+  }
+
+  @SneakyThrows
+  public static Future<String> getFuture(){
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    try{
+      return executor.submit(() -> {
+        return "안녕하세요";
+      });
+    }
+    catch (Exception e){
+      e.printStackTrace();
+      throw new RuntimeException(e);
+    }
+    finally {
+      executor.shutdown();
+    }
+  }
+}
+```
 
 <br/>
 
