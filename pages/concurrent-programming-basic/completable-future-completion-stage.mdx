@@ -26,6 +26,28 @@
 
 
 
+## CompletableFuture 의 Thread Pool
+
+별도로 ExecutorService 를 지정해서 CompletableFuture 를 실행하지 않으면, CompletableFuture 는 기본설정값 으로 Fork Join Pool 을 이용해서 비동기 함수들을 실행합니다.<br/>
+
+Fork Join Pool 의 기본 Pool size 는 JVM 이 구동되는 머신의 CPU 코어수 -1 개입니다. Fork Join Pool 내에서 동작하는 스레드 들은 데몬 스레드로 동작하며, main 스레드가 종료될 경우 함께 즉시 종료됩니다.<br/>
+
+Fork Jon Pool 은 아래와 같이 work steal 알고리즘이 적용된 방식으로 동작하며, 태스크를 sub 태스크로 fork 해서 이것들을 work, steal 하는 방식으로 동작합니다. 그리고 최종 결과는 join 을 통해서 결과가 생성됩니다.<br/>
+
+그림 상으로는 아래와 같은 모습입니다.<br/>
+
+![](./img/completable-future-completion-stage/fork-join-pool.png)
+
+<br/>
+
+
+
+만약 Fork Join Pool 이 아닌 일반적인 스레드 풀을 사용하고 싶다면 [Executors](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Executors.html) 에서 제공하는 팩토리 메서드 들을 통해 직접 생성한 ExecutorService 를 CompletableFuture 의 supplyAsync(Runnable, ExecutorService) 등과 같은 메서드 들에 직접 인자값으로 넘겨주면, 다른 종류의 스레드 풀 기반의 ExecutorService 를 사용할 수 있습니다.<br/>
+
+<br/>
+
+
+
 ## Future
 
 > 참고 : [Future](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html)
@@ -60,7 +82,7 @@ cancel() 과 같은 메서드가 아니라면, 외부에서 future 를 제어할
 또한 isDone(), isCancelled() 의 경계가 모호함으로 인해 완료되었는지, 에러가 발생했는지를 명확하게 확인하기 쉽지 않다는 단점이 있습니다.
 
 ```java
-package io.chagchagchag.example.foobar.concurrent.sync_async.future;
+package INFO io...concurrent.sync_async.future;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -147,7 +169,7 @@ public class Future_Disadvantage_Example1 {
 > 예제의 설명은 주석으로 추가해두었습니다.
 
 ```java
-package io.chagchagchag.example.foobar.concurrent.sync_async.future;
+package INFO io...concurrent.sync_async.future;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -248,7 +270,7 @@ Process finished with exit code 0
 > 예제의 설명은 주석으로 추가해두었습니다.
 
 ```java
-package io.chagchagchag.example.foobar.concurrent.sync_async.future;
+package INFO io...concurrent.sync_async.future;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -354,7 +376,219 @@ CompletionStage 는 위의 메서드 들 외에도 굉장히 다양하고 많은
 
 또한 람다를 인자로 받아서 콜백처럼 동작하는 것 역시 가능합니다.<br/>
 
+CompletionStage 내에서 제공하는 주요 메서드 들은 Java8 부터 제공하기 시작한 기본 함수형 인터페이스를 인자로 취하며 네이밍 컨벤션 역시 thenAccept(), thenApply() 드역시 어느 정도 비슷하기에 이 함수가 어떤 역할을 하는지 인자값은 어떻게 되는지 유추하기 명확합니다.
+
+- CompletableFuture::thenAccept(Consumer)
+- CompletableFuture::thenApply(Function)
+- CompletableFuture::thenCompose(Function)
+- CompletableFuture::thenRun(Runnable)
+
 <br/>
+
+
+
+### then`---`(), then`---`Async() 의 차이점
+
+`then---()` 를 실행할 때에는 `then---()` 를 호출한 caller 의 실행 스레드가 `then---()` 메서드를 실행하게 됩니다.<br/>
+
+`then---Async()` 를 실행할 때에는 `then---Async()` 를 호출한 caller 의 실행 스레드에서 실행되지 않고 별도의 스레드에서 `then---Async()`를 실행합니다.<br/>
+
+<br/>
+
+
+
+### thenAccept(Consumer), thenAcceptAsync(Consumer)
+
+thenAccept(Consumer), thenAcceptAsync(Consumer) 는 함수형 인터페이스 Consumer 를 인자값으로 받습니다. Consumer 는 그 이름에서 알 수 있듯 값을 받은 후 소비를 합니다. 리턴값은 없습니다.
+
+![](./img/completable-future-completion-stage/consumer.png)
+
+<br/>
+
+thenAccept(Consumer) 를 실행할 때에는 thenAccept(Consumer) 를 호출한 caller 의 실행 스레드가 thenAccept(Consumer) 메서드를 실행하게 됩니다.<br/>
+
+thenAcceptAsync(Consumer) 를 실행할 때에는 thenAcceptAsync(Consumer) 를 호출한 caller 의 실행 스레드에서 실행되지 않고 별도의 스레드에서 thenAcceptAsync(Consumer)를 실행합니다.<br/>
+
+<br/>
+
+
+
+#### thenAccept(Consumer)
+
+thenAccept(Consumer) 가 어느 스레드에서 실행되는지 로그를 찍어보는 예제입니다.<br/>
+
+```java
+package INFO io...concurrent.sync_async.completion_stage.consumer;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class ThenAccept_Example1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    log.info("[start] main");
+    CompletionStage<String> stage = stage();
+
+    stage
+        .thenAccept(msg -> {
+          log.info("[thenAccept (1)] msg :: " + msg + "");
+        })
+        .thenAccept(msg -> {
+          log.info("[thenAccept (2)] msg :: " + msg + "");
+        });
+
+    Thread.sleep(1000);
+    log.info("[end] main");
+  }
+
+  @SneakyThrows
+  public static CompletionStage<String> stage(){
+    var future = CompletableFuture.supplyAsync(() -> {
+      log.info("future 내부");
+      return "안녕하세요";
+    });
+
+    Thread.sleep(1000); // 스레드가 회수될 시간 정도의 delay 를 부여
+    return future;
+  }
+}
+```
+
+<br/>
+
+
+
+결과를 확인해보면, 아래와 같이 supplyAsync() 를 실행할때를 제외하고, 모든 호출구문이 main 에서 실행되고 있습니다. thenAccept(Consumer) 를 호출하는 부분 역시 main 스레드에서 실행되었음을 확인 가능합니다.<br/>
+
+<br/>
+
+
+
+출력결과
+
+```plain
+19:04:59.708 [main] INFO INFO io...concurrent.sync_async.completion_stage.consumer.ThenAccept_Example1 -- [start] main
+19:04:59.714 [ForkJoinPool.commonPool-worker-1] INFO INFO io...concurrent.sync_async.completion_stage.consumer.ThenAccept_Example1 -- future 내부
+19:05:00.722 [main] INFO INFO io...concurrent.sync_async.completion_stage.consumer.ThenAccept_Example1 -- [thenAccept (1)] msg :: 안녕하세요
+19:05:00.723 [main] INFO INFO io...concurrent.sync_async.completion_stage.consumer.ThenAccept_Example1 -- [thenAccept (2)] msg :: null
+19:05:01.735 [main] INFO INFO io...concurrent.sync_async.completion_stage.consumer.ThenAccept_Example1 -- [end] main
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+#### thenAcceptAsync(Consumer)
+
+thenAcceptAsync(Consumer) 가 어느 스레드에서 실행되는지 로그를 찍어보는 예제입니다.<br/>
+
+```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.completion_stage.consumer;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class ThenAcceptAsync_Example {
+  @SneakyThrows
+  public static void main(String[] args) {
+    log.info("[start] main");
+    CompletionStage<String> stage = stage();
+    stage
+        .thenAcceptAsync(msg -> {
+          log.info("[thenAccept (1)] msg :: " + msg + "");
+        })
+        .thenAcceptAsync(msg -> {
+          log.info("[thenAccept (2)] msg :: " + msg + "");
+        });
+
+    Thread.sleep(1000);
+    log.info("[end] main");
+  }
+
+  @SneakyThrows
+  public static CompletionStage<String> stage(){
+    var future = CompletableFuture.supplyAsync(() -> {
+      log.info("future 내부");
+      return "안녕하세요";
+    });
+
+    Thread.sleep(1000); // 스레드가 회수될 시간 정도의 delay 를 부여
+    return future;
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과를 보면 thenAcceptAsync(Consumer) 구문은 `ForkJoinPool.commonPool-worker-1` 에서 실행되고 메인스레드와는 다른 스레드에서 별도로 실행되고 있다는 사실을 알 수 있습니다.<br/>
+
+
+
+출력결과
+
+```plain
+19:09:16.839 [main] INFO INFO io...concurrent.sync_async.completion_stage.consumer.ThenAcceptAsync_Example -- [start] main
+19:09:16.854 [ForkJoinPool.commonPool-worker-1] INFO INFO io...concurrent.sync_async.completion_stage.consumer.ThenAcceptAsync_Example -- future 내부
+19:09:17.864 [ForkJoinPool.commonPool-worker-1] INFO INFO io...concurrent.sync_async.completion_stage.consumer.ThenAcceptAsync_Example -- [thenAccept (1)] msg :: 안녕하세요
+19:09:17.865 [ForkJoinPool.commonPool-worker-1] INFO INFO io...concurrent.sync_async.completion_stage.consumer.ThenAcceptAsync_Example -- [thenAccept (2)] msg :: null
+19:09:18.871 [main] INFO INFO io...concurrent.sync_async.completion_stage.consumer.ThenAcceptAsync_Example -- [end] main
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+### thenApply(Function), thenApplyAsync(Function)
+
+thenApply(Function), thenApplyAsync(Function) 는 함수형 인터페이스 Function 을 인자값으로 받습니다. Function 은 실무에서 많이 접하셨겠지만, 입력값 T 에 대해서 출력(Return)값 R 을 return 합니다.
+
+![](./img/completable-future-completion-stage/function.png)
+
+<br/>
+
+thenApply(Function) 을 실행할 때에는 thenApply(Function) 을 호출한 caller 의 실행 스레드가 thenApply(Function) 메서드를 실행하게 됩니다.<br/>
+
+thenApplyAsync(Function) 를 실행할 때에는 thenApplyAsync(Function) 를 호출한 caller 의 실행 스레드에서 실행되지 않고 별도의 스레드에서 thenApplyAsync(Function) 를 실행합니다.<br/>
+
+<br/>
+
+
+
+#### thenApply(Function)
+
+
+
+#### thenApplyAsync(Function)
+
+
+
+
+
+
+
+### thenCompose(Function), thenComposeAsyc(Function)
+
+
+
+### thenRun(Runnable), thenRunAsync(Runnable)
+
+
+
+### exceptionally
+
+
 
 
 
