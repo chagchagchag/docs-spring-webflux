@@ -3,5 +3,5 @@
     "sync-vs-async": "동기 vs 비동기",
     "blocking-vs-nonblocking": "블로킹 vs 논 블로킹",
     "executor-service": "ExecutorService",
-    "completable-future-completable-stage": "CompletableFuture, CompletableStage"
+    "completable-future-completion-stage": "CompletableFuture, CompletableStage"
 }
