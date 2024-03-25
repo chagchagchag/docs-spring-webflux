@@ -18,8 +18,6 @@
 
 <br/>
 
-
-
 - Future
 - CompletionStage
 - CompletableFuture
@@ -30,9 +28,116 @@
 
 ## Future
 
+> 참고 : [Future](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html)
+
+<br/>
+
+[Future](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html) interface 에서 살펴볼 메서드는 isDone(), isCancelled(), get(), cancel() 메서드 입니다.<br/>
+
+- **[isDone](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html#isDone--)**()
+  - isDone() 메서드는 태스크가 취소되든, 완료되었든 끝난 상태라면 true 를 반환하고 진행중이라면 false 를 리턴합니다.
+- **[isCancelled](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html#isCancelled--)**()
+  - isCancelled() 메서드는 태스크가 취소된 경우에만 true 를 리턴하고 취소되지 않은 상태인 경우 false 를 리턴합니다.
+- get()
+  - **[get](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html#get--)**() 
+    - 작업이 끝날 때 까지 thread 가 block 됩니다.  future 에서 무한 루프나 오랜 시간이 걸릴 경우 thread 가 blocking 상태로 유지됩니다.
+  - **[get](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html#get-long-java.util.concurrent.TimeUnit-)**(long timeout, [TimeUnit](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/TimeUnit.html) unit)
+    - timeout 동안 thread 가 block 됩니다. timeout 이 넘어가면 TimeoutException 이 throw 됩니다.
+- cancel()
+  - **[cancel](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html#cancel-boolean-)**(boolean mayInterruptIfRunning)
+    - future 의 작업을 취소합니다.
+    - mayInterruptIfRunning 을 false 로 지정하면, 시작하지 않은 작업에 대해서만 취소를 합니다.
+    - 취소할 수 없는 상황일 경우(e.g. myInterruptIfRunning 이 false 인데 이미 시작한 작업일 경우)에는 false 를 return 합니다.
+
+<br/>
 
 
-## CompletableStage
+
+### 예제. isDone(), isCancelled(), get(), cancel()
+
+```java
+```
+
+<br/>
+
+
+
+### Future interface 의 단점
+
+cancel() 과 같은 메서드가 아니라면, 외부에서 future 를 제어할 방법이 없습니다. 또한 get() 메서드의 블로킹 기반의 연산으로 값을 얻어온 후 연산을 처리하며, 비동기적으로 데이터를 처리하려면 프로그래머가 직접 그 코드를 하드코딩해서 만들어야합니다.<br/>
+
+또한 isDone(), isCancelled() 의 경계가 모호함으로 인해 완료되었는지, 에러가 발생했는지를 명확하게 확인하기 쉽지 않다는 단점이 있습니다.
+
+```java
+```
+
+<br/>
+
+
+
+반면 CompletableStage 는 thenAsync(), thenCompose(), supplyAsync() 와 같은 메서드를 통해 체이닝을 통해 비동기적인 프로그래밍을 제공합니다. 여기에 대해서는 다음 섹션에서 정리합니다.<br/>
+
+<br/>
+
+
+
+## CompletionStage
+
+> 참고 : [CompletionStage](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletionStage.html) 
+
+CompletableStage interface 에서 살펴볼 주요 메서드 들은 아래와 같습니다.<br/>
+
+(출처 : [github.com/JetBrains/jdk8u_jdk](https://github.com/JetBrains/jdk8u_jdk/blob/master/src/share/classes/java/util/concurrent/CompletionStage.java))
+
+```java
+package java.util.concurrent;
+// ...
+public interface CompletionStage<T> {
+    public <U> CompletionStage<U> thenApply(Function<? super T,? extends U> fn);
+    public <U> CompletionStage<U> thenApplyAsync
+        (Function<? super T,? extends U> fn);
+    public <U> CompletionStage<U> thenApplyAsync
+        (Function<? super T,? extends U> fn,
+         Executor executor);
+    
+    public CompletionStage<Void> thenAccept(Consumer<? super T> action);
+    public CompletionStage<Void> thenAcceptAsync(Consumer<? super T> action);
+    public CompletionStage<Void> thenAcceptAsync(Consumer<? super T> action,
+                                                 Executor executor);
+    
+    
+    public CompletionStage<Void> thenRun(Runnable action);
+    public CompletionStage<Void> thenRunAsync(Runnable action);
+    public CompletionStage<Void> thenRunAsync(Runnable action,
+                                              Executor executor);
+    
+    // ...
+    
+    public <U> CompletionStage<U> thenCompose
+        (Function<? super T, ? extends CompletionStage<U>> fn);
+    public <U> CompletionStage<U> thenComposeAsync
+        (Function<? super T, ? extends CompletionStage<U>> fn);
+    public <U> CompletionStage<U> thenComposeAsync
+        (Function<? super T, ? extends CompletionStage<U>> fn,
+         Executor executor);
+    
+    // ...
+    
+    public CompletionStage<T> exceptionally
+        (Function<Throwable, ? extends T> fn);
+    
+}
+```
+
+<br/>
+
+
+
+CompletionStage 는 위의 메서드 들 외에도 굉장히 다양하고 많은 메서드 들을 제공하고 있습니다. 이 메서드 들을 활용하면 태스크 들을 비동기적으로 실행하고 값을 조작하거나 체이닝이 가능해집니다. <br/>
+
+또한 람다를 인자로 받아서 콜백처럼 동작하는 것 역시 가능합니다.<br/>
+
+<br/>
 
 
 
