@@ -820,7 +820,76 @@ Process finished with exit code 0
 
 ### exceptionally
 
+exceptionally 는 Throwable 을 받아서 일반적인 값으로 돌려주는 역할을 수행합니다.<br/>
 
+![](./img/completable-future-completion-stage/exceptionally.png)
+
+<br/>
+
+
+
+```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.completion_stage.exceptionally;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class Exceptionally_Example1 {
+  public static void main(String[] args) {
+    log.info("[start] main");
+    stage()
+        .thenApplyAsync(msg -> {
+          log.info("thenApplyAsync");
+          msg.charAt(-1);
+          return msg.length();
+        })
+        .exceptionally(e -> {
+          log.info("exceptionally, e = " + e.getMessage());
+          return -1;
+        })
+        .thenAcceptAsync(resultCode -> {
+          log.info("thenAcceptAsync, resultCode == " + resultCode);
+        });
+
+    sleep(1000);
+    log.info("[end] main");
+  }
+
+  public static CompletionStage<String> stage(){
+    return CompletableFuture.supplyAsync(() -> {
+      log.info("CompletableFuture::supplyAsync 내부");
+      return "안녕하세요.";
+    });
+  }
+
+  @SneakyThrows
+  public static void sleep(long ms){
+    Thread.sleep(ms);
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+09:52:39.293 [main] INFO io...concurrent.sync_async.completion_stage.exceptionally.Exceptionally_Example1 -- [start] main
+09:52:39.304 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.exceptionally.Exceptionally_Example1 -- CompletableFuture::supplyAsync 내부
+09:52:39.306 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.exceptionally.Exceptionally_Example1 -- thenApplyAsync
+09:52:39.309 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.exceptionally.Exceptionally_Example1 -- exceptionally, e = java.lang.StringIndexOutOfBoundsException: Index -1 out of bounds for length 6
+09:52:39.310 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.exceptionally.Exceptionally_Example1 -- thenAcceptAsync, resultCode == -1
+09:52:40.309 [main] INFO io...concurrent.sync_async.completion_stage.exceptionally.Exceptionally_Example1 -- [end] main
+
+Process finished with exit code 0
+```
+
+<br/>
 
 
 
