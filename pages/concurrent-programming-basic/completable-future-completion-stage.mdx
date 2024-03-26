@@ -887,6 +887,18 @@ Process finished with exit code 0
 
 ## CompletableFuture
 
+[CompletableFuture](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletableFuture.html) 는 [CompletionStage](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/CompletionStage.html) interface, [Future](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Future.html) interface 를 implements 한 구체타입 클래스입니다.<br/>
+
+![](./img/completable-future-completion-stage/completable-future.png)
+
+<br/>
+
+CompletionStage interface 내의 주요 기능과 Future interface 에서 제공하는 주요 기능에 대해서 Java 8 에서 하나의 기본 구현체를 CompletableFuture 클래스 내에 정의해서 제공하기 시작했습니다.<br/>
+
+CompletableFuture 는 CompletableFuture 의 함수를 호출하는 즉시 내부 구문이 실행됩니다. 즉 지연 로딩이 지원되지 않는 다는 단점이 있습니다. 이 외에도  CompletableFuture 객체를 한번 생성 후 작업을 끝낸 후 똑같은 작업을 계속해서 수행할 수 없다는 단점이 있습니다. 예를 들어 Flux, Mono 의 경우 Publisher 는 계속해서 데이터를 공급하고 Subscriber 는 계속해서 데이터를 수신합니다. 반면 CompletableFuture 는 매번 새로 Future 객체를 생성해서 작업을 즉시 수행하고 자원을 반납해야 한다는 단점이 있습니다.<br/><br/>
+
+이런 단점들에도 불구하고 레거시를 개선해야 하는 환경이거나, 팀장이 시키면 해야 하는 등 여러가지 이유때문에 어쩔수 없이 CompletableFuture 를 사용해야 하는 경우가 있습니다. 레거시 환경에서 최적의 퍼포먼스를 내야 하는 이런 경우에 대비해 CompletableFuture 의 여러 기능들을 정리해봅니다.<br/><br/>
+
 
 
 ### CompletableFuture 클래스의 주요 메서드
@@ -953,6 +965,8 @@ public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
 
 supplyAsync(Supplier\<U\>) 의 함수의 명세는 아래와 같습니다.
 
+> 출처 : [github.com/JetBrains/jdk8u_jdk](https://github.com/JetBrains/jdk8u_jdk/blob/master/src/share/classes/java/util/concurrent/CompletableFuture.java)
+
 ```java
 public static <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier) {
     return asyncSupplyStage(asyncPool, supplier);
@@ -1011,6 +1025,8 @@ public class SupplyAsync_Example1 {
 ### runAsync(Runnable)
 
 runAsync(Runnable) 메서드의 명세는 아래와 같습니다.
+
+> 출처 : [github.com/JetBrains/jdk8u_jdk](https://github.com/JetBrains/jdk8u_jdk/blob/master/src/share/classes/java/util/concurrent/CompletableFuture.java)
 
 ```java
 public static CompletableFuture<Void> runAsync(Runnable runnable) {
@@ -1072,6 +1088,8 @@ public class RunAsync_Example1 {
 
 complete() 메서드의 명세는 아래와 같습니다.
 
+> 출처 : [github.com/JetBrains/jdk8u_jdk](https://github.com/JetBrains/jdk8u_jdk/blob/master/src/share/classes/java/util/concurrent/CompletableFuture.java)
+
 ```java
 public boolean complete(T value) {
     boolean triggered = completeValue(value);
@@ -1127,6 +1145,8 @@ public class Complete_Example1 {
 
 isCompletedExceptionally() 메서드는 아래와 같이 정의되어 있습니다.
 
+> 출처 : [github.com/JetBrains/jdk8u_jdk](https://github.com/JetBrains/jdk8u_jdk/blob/master/src/share/classes/java/util/concurrent/CompletableFuture.java)
+
 ```java
 public boolean isCompletedExceptionally() {
     Object r;
@@ -1171,6 +1191,8 @@ public class IsCompletedExceptionally_Example1 {
 ### allOf()
 
 allOf() 는 아래와 같이 정의되어 있습니다.
+
+> 출처 : [github.com/JetBrains/jdk8u_jdk](https://github.com/JetBrains/jdk8u_jdk/blob/master/src/share/classes/java/util/concurrent/CompletableFuture.java)
 
 ```java
 public static CompletableFuture<Void> allOf(CompletableFuture<?>... cfs) {
@@ -1267,6 +1289,8 @@ Process finished with exit code 0
 
 anyOf() 는 아래와 같이 정의되어 있습니다.
 
+> 출처 : [github.com/JetBrains/jdk8u_jdk](https://github.com/JetBrains/jdk8u_jdk/blob/master/src/share/classes/java/util/concurrent/CompletableFuture.java)
+
 ```java
 public static CompletableFuture<Object> anyOf(CompletableFuture<?>... cfs) {
     return orTree(cfs, 0, cfs.length - 1);
@@ -1357,7 +1381,7 @@ Process finished with exit code 0
 
 <br/>
 
-지속적으로 발생하는 데이터를 처리하기 쉽지 않다.
+**지속적으로 발생하는 데이터를 처리하기 쉽지 않다.**
 
 - CompletableFuture 는 한번 생성한 후에 작업을 끝내고 나서 똑같은 작업을 계속 수행할 수 없다는 단점이 있습니다.
 - Flux, Mono 의 예를 들어보면, 계속해서 Publisher 는 데이터를 공급하고, Subscriber 는 계속해서 데이터를 수신합니다. 반면 CompletableFuture 는 매번 새로 Future 객체를 생성해서 작업을 즉시 수행하고 자원을 반납해야 한다는 단점이 있습니다.
