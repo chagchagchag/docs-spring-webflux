@@ -447,11 +447,11 @@ public class ThenAccept_Example1 {
   @SneakyThrows
   public static CompletionStage<String> stage(){
     var future = CompletableFuture.supplyAsync(() -> {
-      log.info("future 내부");
+      log.info("CompletableFuture 내부");
       return "안녕하세요";
     });
 
-    Thread.sleep(1000); // 스레드가 회수될 시간 정도의 delay 를 부여
+    Thread.sleep(1000);
     return future;
   }
 }
@@ -516,11 +516,11 @@ public class ThenAcceptAsync_Example {
   @SneakyThrows
   public static CompletionStage<String> stage(){
     var future = CompletableFuture.supplyAsync(() -> {
-      log.info("future 내부");
+      log.info("CompletableFuture 내부");
       return "안녕하세요";
     });
 
-    Thread.sleep(1000); // 스레드가 회수될 시간 정도의 delay 를 부여
+    Thread.sleep(1000);
     return future;
   }
 }
@@ -566,23 +566,255 @@ thenApplyAsync(Function) 를 실행할 때에는 thenApplyAsync(Function) 를 �
 
 
 
-#### thenApply(Function)
-
-
-
 #### thenApplyAsync(Function)
 
+```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.completion_stage.function;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class ThenApplyAsync_Example1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    log.info("[start] main");
+    CompletionStage<String> stage = stage();
+
+    stage
+        .thenApplyAsync(msg -> {
+          String mapping = msg + " 오늘은 날씨가 흐리네요.";
+          log.info("thenApplyAsync (1) ::: " + msg);
+          return mapping;
+        })
+        .thenApplyAsync(msg -> {
+          String mapping = msg + " 감기 조심하세요";
+          log.info("thenApplyAsync (2) ::: " + msg);
+          return mapping;
+        })
+        .thenApplyAsync(msg -> {
+          int length = msg.length();
+          log.info("length ::: " + length);
+          return length;
+        })
+        .thenAcceptAsync(length -> {
+          log.info("length ::: " + length);
+        });
+
+    Thread.sleep(300);
+    log.info("[end] main");
+  }
+
+  public static CompletionStage<String> stage(){
+    return CompletableFuture.supplyAsync(() -> {
+      log.info("CompletableFuture::supplyAsync 내부");
+      return "안녕하세요.";
+    });
+  }
+}
+```
+
+<br/>
 
 
 
+출력결과
+
+```plain
+08:17:04.489 [main] INFO io...concurrent.sync_async.completion_stage.function.ThenApplyAsync_Example1 -- [start] main
+08:17:04.493 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.function.ThenApplyAsync_Example1 -- CompletableFuture::supplyAsync 내부
+08:17:04.496 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.function.ThenApplyAsync_Example1 -- thenApplyAsync (1) ::: 안녕하세요.
+08:17:04.496 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.function.ThenApplyAsync_Example1 -- thenApplyAsync (2) ::: 안녕하세요. 오늘은 날씨가 흐리네요.
+08:17:04.499 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.function.ThenApplyAsync_Example1 -- length ::: 29
+08:17:04.499 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.function.ThenApplyAsync_Example1 -- length ::: 29
+08:17:04.804 [main] INFO io...concurrent.sync_async.completion_stage.function.ThenApplyAsync_Example1 -- [end] main
+
+Process finished with exit code 0
+```
+
+<br/>
 
 
 
 ### thenCompose(Function), thenComposeAsyc(Function)
 
+thenCompose(Function), thenComposeAsync(Function) 는 함수형 인터페이스 Function 을 인자값으로 받습니다. Function 은 실무에서 많이 접하셨겠지만, 입력값 T 에 대해서 출력(Return)값 R 을 return 합니다.
+
+![](./img/completable-future-completion-stage/function.png)
+
+<br/>
+
+thenCompose(Function) 을 실행할 때에는 thenCompose(Function) 을 호출한 caller 의 실행 스레드가 thenCompose(Function) 메서드를 실행하게 됩니다.<br/>
+
+thenComposeAsync(Function) 를 실행할 때에는 thenComposeAsync(Function) 를 호출한 caller 의 실행 스레드에서 실행되지 않고 별도의 스레드에서 thenComposeAsync(Function) 를 실행합니다.<br/>
+
+<br/>
+
+
+
+#### thenComposeAsync(Function)
+
+```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.completion_stage.function;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class ThenComposeAsync_Example1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    CompletionStage<String> stage = stage();
+    stage
+        .thenComposeAsync(msg -> {
+          CompletionStage<String> result = append(msg, " 안녕하세요");
+          return result;
+        })
+        .thenComposeAsync(msg -> {
+          CompletionStage<Integer> result = length(msg);
+          return result;
+        })
+        .thenAcceptAsync(value -> {
+          log.info("thenAcceptAsync, value = " + value);
+        });
+
+    Thread.sleep(1000);
+  }
+
+  public static CompletionStage<String> stage(){
+    return CompletableFuture.supplyAsync(() -> {
+      log.info("CompletableFuture::supplyAsync 내부");
+      return "안녕하세요.";
+    });
+  }
+
+  public static CompletionStage<String> append(String source, String postfix){
+    return CompletableFuture.supplyAsync(() -> {
+      sleep(100);
+      return source + postfix;
+    });
+  }
+
+  public static CompletionStage<Integer> length(String source){
+    return CompletableFuture.supplyAsync(() -> {
+      sleep(100);
+      return source.length();
+    });
+  }
+
+  @SneakyThrows
+  public static void sleep(long ms){
+    try{
+      Thread.sleep(100);
+    }
+    catch (Exception e){
+      e.printStackTrace();
+    }
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+09:21:54.642 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.function.ThenComposeAsync_Example1 -- CompletableFuture::supplyAsync 내부
+09:21:54.863 [ForkJoinPool.commonPool-worker-2] INFO io...concurrent.sync_async.completion_stage.function.ThenComposeAsync_Example1 -- thenAcceptAsync, value = 12
+
+Process finished with exit code 0
+```
+
+<br/>
+
 
 
 ### thenRun(Runnable), thenRunAsync(Runnable)
+
+thenRun(Runnable), thenRunAsync(Runnable) 는 함수형 인터페이스 Runnable 을 인자값으로 받습니다. 
+
+![](./img/completable-future-completion-stage/runnable.png)
+
+<br/>
+
+thenRun(Runnable) 을 실행할 때에는 thenRun(Runnable) 을 호출한 caller 의 실행 스레드가 thenRun(Runnable) 메서드를 실행하게 됩니다.<br/>
+
+thenRunAsync(Runnable) 를 실행할 때에는 thenRunAsync(Runnable) 를 호출한 caller 의 실행 스레드에서 실행되지 않고 별도의 스레드에서 thenRunAsync(Runnable) 를 실행합니다.<br/>
+
+<br/>
+
+
+
+#### thenRunAsync(Runnable)
+
+```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.completion_stage.runnable;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class ThenRunAsync_Example {
+  public static void main(String[] args) {
+    log.info("[start] main");
+    CompletionStage<String> stage = stage();
+
+    stage
+        .thenRunAsync(() -> {
+          log.info("thenRunAsync() (1)");
+        })
+        .thenRunAsync(() -> {
+          log.info("thenRunAsync() (2)");
+        })
+        .thenAcceptAsync(v -> {
+          log.info("thenAcceptAsync :: " + v);
+        });
+
+    log.info("[end] main");
+    sleep(100);
+  }
+
+  public static CompletionStage<String> stage(){
+    var future = CompletableFuture.supplyAsync(() -> {
+      log.info("CompletableFuture 내부");
+      return "안녕하세요";
+    });
+    return future;
+  }
+
+  @SneakyThrows
+  public static void sleep(long ms){
+    Thread.sleep(ms);
+  }
+}
+```
+
+<br/>
+
+
+
+출력결과
+
+```plain
+09:33:06.916 [main] INFO io...concurrent.sync_async.completion_stage.runnable.ThenRunAsync_Example -- [start] main
+09:33:06.922 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.runnable.ThenRunAsync_Example -- CompletableFuture 내부
+09:33:06.923 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.runnable.ThenRunAsync_Example -- thenRunAsync() (1)
+09:33:06.923 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.runnable.ThenRunAsync_Example -- thenRunAsync() (2)
+09:33:06.924 [main] INFO io...concurrent.sync_async.completion_stage.runnable.ThenRunAsync_Example -- [end] main
+09:33:06.924 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.sync_async.completion_stage.runnable.ThenRunAsync_Example -- thenAcceptAsync :: null
+
+Process finished with exit code 0
+```
+
+<br/>
 
 
 
