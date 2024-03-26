@@ -82,8 +82,6 @@ cancel() 과 같은 메서드가 아니라면, 외부에서 future 를 제어할
 또한 isDone(), isCancelled() 의 경계가 모호함으로 인해 완료되었는지, 에러가 발생했는지를 명확하게 확인하기 쉽지 않다는 단점이 있습니다.
 
 ```java
-package INFO io...concurrent.sync_async.future;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -169,8 +167,6 @@ public class Future_Disadvantage_Example1 {
 > 예제의 설명은 주석으로 추가해두었습니다.
 
 ```java
-package INFO io...concurrent.sync_async.future;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -270,8 +266,6 @@ Process finished with exit code 0
 > 예제의 설명은 주석으로 추가해두었습니다.
 
 ```java
-package INFO io...concurrent.sync_async.future;
-
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -418,8 +412,6 @@ thenAcceptAsync(Consumer) 를 실행할 때에는 thenAcceptAsync(Consumer) 를 
 thenAccept(Consumer) 가 어느 스레드에서 실행되는지 로그를 찍어보는 예제입니다.<br/>
 
 ```java
-package INFO io...concurrent.sync_async.completion_stage.consumer;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import lombok.SneakyThrows;
@@ -897,7 +889,480 @@ Process finished with exit code 0
 
 
 
+### CompletableFuture 클래스의 주요 메서드
 
+이번 문서에서 알아볼 메서드 들은 supplyAsync(Supplier), supplyAsync(Supplier, Executor), complete(T), completeExceptionally(Throwable), allOf(CompletableFuture), anyOf(CompletableFuture) 입니다.
+
+> 출처 : [github.com/JetBrains/jdk8u_jdk](https://github.com/JetBrains/jdk8u_jdk/blob/master/src/share/classes/java/util/concurrent/CompletableFuture.java)
+
+```java
+package java.util.concurrent;
+// ...
+
+public class CompletableFuture<T> implements Future<T>, CompletionStage<T> {
+    // ...
+    
+    public static <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier) {
+        return asyncSupplyStage(asyncPool, supplier);
+    }
+    
+    public static <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier,
+                                                       Executor executor) {
+        return asyncSupplyStage(screenExecutor(executor), supplier);
+    }
+    
+    public static CompletableFuture<Void> runAsync(Runnable runnable) {
+        return asyncRunStage(asyncPool, runnable);
+    }
+    
+    public static CompletableFuture<Void> runAsync(Runnable runnable,
+                                                   Executor executor) {
+        return asyncRunStage(screenExecutor(executor), runnable);
+    }
+    
+    public boolean complete(T value) {
+        boolean triggered = completeValue(value);
+        postComplete();
+        return triggered;
+    }
+    
+    public boolean completeExceptionally(Throwable ex) {
+        if (ex == null) throw new NullPointerException();
+        boolean triggered = internalComplete(new AltResult(ex));
+        postComplete();
+        return triggered;
+    }
+    
+    public static CompletableFuture<Void> allOf(CompletableFuture<?>... cfs) {
+        return andTree(cfs, 0, cfs.length - 1);
+    }
+    
+    public static CompletableFuture<Object> anyOf(CompletableFuture<?>... cfs) {
+        return orTree(cfs, 0, cfs.length - 1);
+    }
+    
+    // ...
+}
+```
+
+<br/>
+
+
+
+### supplyAsync(Supplier)
+
+supplyAsync(Supplier\<U\>) 의 함수의 명세는 아래와 같습니다.
+
+```java
+public static <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier) {
+    return asyncSupplyStage(asyncPool, supplier);
+}
+
+public static <U> CompletableFuture<U> supplyAsync(Supplier<U> supplier,
+                                                   Executor executor) {
+    return asyncSupplyStage(screenExecutor(executor), supplier);
+}
+```
+
+supplyAsync() 함수는 CompletableFuture 객체를 반환하며, U 타입을 가지는 CompletableFuture객체 CompletableFuture\<U\> 를 return 합니다. supplyAsync () 함수는 두가지가 있는데, 만약 커스텀한 스레드 풀 기반의 Executor 안에서 동작하게끔 하고 싶다면 위의 함수 들 중 두번째 함수를 사용하시면 됩니다.<br/>
+
+CompletableFuture::supplyAsync(Supplier) 메서드는 메서드 호출 즉시 작업이 실행됩니다.<br/>
+
+<br/>
+
+
+
+예제
+
+```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.completable_future;
+
+import java.util.concurrent.CompletableFuture;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class SupplyAsync_Example1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    CompletableFuture<String> completableFuture = CompletableFuture.supplyAsync(() -> {
+      sleep(100);
+      return "감기기운이 있어요";
+    });
+
+    assert completableFuture.isDone() == false;
+
+    sleep(1000);
+    assert completableFuture.isDone();
+    assert completableFuture.get() == "감기기운이 있어요";
+  }
+
+  @SneakyThrows
+  public static void sleep(long ms){
+    Thread.sleep(ms);
+  }
+}
+```
+
+<br/>
+
+
+
+### runAsync(Runnable)
+
+runAsync(Runnable) 메서드의 명세는 아래와 같습니다.
+
+```java
+public static CompletableFuture<Void> runAsync(Runnable runnable) {
+    return asyncRunStage(asyncPool, runnable);
+}
+
+public static CompletableFuture<Void> runAsync(Runnable runnable,
+                                               Executor executor) {
+    return asyncRunStage(screenExecutor(executor), runnable);
+}
+```
+
+<br/>
+
+
+
+runAsync(Runnable) 메서드는 메서드 호출 즉시 실행 됩니다. 내부적으로 받는 인자값이 없으며 반환값 역시 존재하지 않는 Runnable 람다를 받아서 실행합니다. runAsync(Runnable, Executor) 함수를 사용할 경우 커스텀하게 설정한 스레드 풀이 정의 된 Executor 객체를 두번째 인자로 지정 가능합니다. 이렇게 하면 사용자 정의 스레드 풀 위해서 CompletableFuture 내의 작업 처리 코드가 실행됩니다.<br/>
+
+<br/>
+
+
+
+예제
+
+```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.completable_future;
+
+import java.util.concurrent.CompletableFuture;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class RunAsync_Example1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    var completableFuture = CompletableFuture.runAsync(()-> {
+      sleep(100);
+    });
+
+    assert !completableFuture.isDone();
+
+    sleep(1000);
+    assert completableFuture.isDone();
+    assert completableFuture.get() == null;
+  }
+
+  @SneakyThrows
+  public static void sleep(long ms){
+    Thread.sleep(ms);
+  }
+}
+```
+
+<br/>
+
+
+
+### complete()
+
+complete() 메서드의 명세는 아래와 같습니다.
+
+```java
+public boolean complete(T value) {
+    boolean triggered = completeValue(value);
+    postComplete();
+    return triggered;
+}
+```
+
+<br/>
+
+
+
+complete(T) 메서드는 CompletableFuture 가 완료되지 않았을 경우 T 값을 반환하게 하면서 종료시키는 메서드입니다. complete(T) 로 인해 작업의 상태가 변하면 true 를 return 하고, complete(T) 로 인해 작업의 상태가 바뀌지 않았다면 false 를 return 합니다.<br/>
+
+<br/>
+
+
+
+예제
+
+```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.completable_future;
+
+import java.util.concurrent.CompletableFuture;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class Complete_Example1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    CompletableFuture<String> future = new CompletableFuture<>();
+    assert future.isDone() == false;
+
+    boolean changed1 = future.complete("감기기운 있어요 흐흐흑");
+    assert future.isDone() == true;
+    assert changed1 == true;
+    assert future.get().equals("감기기운 있어요 흐흐흑");
+
+    boolean changed2 = future.complete("감기기운 있다구요");
+    assert future.isDone() == true;
+    assert changed2 == false;
+    assert future.get().equals("감기기운 있어요 흐흐흑");
+  }
+}
+```
+
+<br/>
+
+
+
+### isCompletedExceptionally()
+
+isCompletedExceptionally() 메서드는 아래와 같이 정의되어 있습니다.
+
+```java
+public boolean isCompletedExceptionally() {
+    Object r;
+    return ((r = result) instanceof AltResult) && r != NIL;
+}
+```
+
+<br/>
+
+isCompletedExceptionally() 메서드는 Exception 에 의해 종료되었는지를 체크합니다.<br/>
+
+
+
+예제
+
+```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.completable_future;
+
+import java.util.concurrent.CompletableFuture;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class IsCompletedExceptionally_Example1 {
+  @SneakyThrows
+  public static void main(String[] args) {
+    CompletableFuture<String> exceptionFuture = CompletableFuture.supplyAsync(() -> {
+      return "안녕하세요".substring(5, 6);
+    });
+
+    Thread.sleep(100);
+    assert exceptionFuture.isDone();
+    assert exceptionFuture.isCompletedExceptionally();
+  }
+}
+```
+
+<br/>
+
+
+
+### allOf()
+
+allOf() 는 아래와 같이 정의되어 있습니다.
+
+```java
+public static CompletableFuture<Void> allOf(CompletableFuture<?>... cfs) {
+    return andTree(cfs, 0, cfs.length - 1);
+}
+```
+
+<br/>
+
+
+
+allOf() 를 사용하면 여러 개의 completableFuture 를 모아서 하나의 CompletableFuture 를 모아서 하나의 CompletableFuture 로 만들 수 있습니다. <br/>
+
+예제
+
+```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.completable_future;
+
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class AllOf_Example1 {
+
+  public static void main(String[] args) {
+    long started = System.currentTimeMillis();
+    CompletableFuture<String> f1 = delayedFuture(1000, "안녕하세요");
+    CompletableFuture<String> f2 = delayedFuture(2000, "배고파요");
+    CompletableFuture<String> f3 = delayedFuture(3000, "배불러요");
+
+    CompletableFuture.allOf(f1, f2, f3)
+        .thenAcceptAsync(msg -> {
+          log.info("--- after allOf");
+          try {
+            log.info("f1 = " + f1.get());
+            log.info("f2 = " + f2.get());
+            log.info("f3 = " + f3.get());
+          } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+          }
+        })
+        .join();
+
+    long endTime = System.currentTimeMillis();
+    log.info("   took {} ms", (endTime - started));
+  }
+
+  public static CompletableFuture<String> delayedFuture(long ms, String msg){
+    return CompletableFuture.supplyAsync(()->{
+      log.info("delayedFuture, ms = " + ms);
+      sleep(ms);
+      return msg;
+    });
+  }
+
+  @SneakyThrows
+  public static void sleep(long ms){
+    Thread.sleep(ms);
+  }
+}
+```
+
+<br/>
+
+
+
+아래의 출력결과를 보면, 1초,2초,3초가 걸리는 작업을 순차적으로 실행하면 7초가 걸리겠지만, CompletableFuture 를 통해 여러 작업을 수행한 결과로 모든 작업을 완료하는 데에 3초가 걸렸습니다..<br/>
+
+
+
+출력결과
+
+```plain
+12:01:30.864 [ForkJoinPool.commonPool-worker-3] INFO io...concurrent.concurrent.sync_async.completable_future.AllOf_Example1 -- delayedFuture, ms = 3000
+12:01:30.864 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.concurrent.sync_async.completable_future.AllOf_Example1 -- delayedFuture, ms = 1000
+12:01:30.864 [ForkJoinPool.commonPool-worker-2] INFO io...concurrent.concurrent.sync_async.completable_future.AllOf_Example1 -- delayedFuture, ms = 2000
+12:01:33.869 [ForkJoinPool.commonPool-worker-2] INFO io...concurrent.concurrent.sync_async.completable_future.AllOf_Example1 -- --- after allOf
+12:01:33.869 [ForkJoinPool.commonPool-worker-2] INFO io...concurrent.concurrent.sync_async.completable_future.AllOf_Example1 -- f1 = 안녕하세요
+12:01:33.870 [ForkJoinPool.commonPool-worker-2] INFO io...concurrent.concurrent.sync_async.completable_future.AllOf_Example1 -- f2 = 배고파요
+12:01:33.870 [ForkJoinPool.commonPool-worker-2] INFO io...concurrent.concurrent.sync_async.completable_future.AllOf_Example1 -- f3 = 배불러요
+12:01:33.870 [main] INFO io...concurrent.concurrent.sync_async.completable_future.AllOf_Example1 --    took 3018 ms
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+### anyOf()
+
+anyOf() 는 아래와 같이 정의되어 있습니다.
+
+```java
+public static CompletableFuture<Object> anyOf(CompletableFuture<?>... cfs) {
+    return orTree(cfs, 0, cfs.length - 1);
+}
+```
+
+<br/>
+
+가변인자로 Completable\<?\> ... cfs 를 받고있습니다. anyOf() 는 CompletableFuture 를 여러개 받으며, 이 작업 들 중 가장 먼저 끝난 작업이 있을 경우 이것을 return 해줍니다. <br/>
+
+<br/>
+
+예제
+
+```java
+package io.chagchagchag.example.foobar.concurrent.sync_async.completable_future;
+
+import java.util.concurrent.CompletableFuture;
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+public class AnyOf_Example1 {
+  public static void main(String[] args) {
+    long started = System.currentTimeMillis();
+    CompletableFuture<String> f1 = delayedFuture(1000, "안녕하세요");
+    CompletableFuture<String> f2 = delayedFuture(2000, "배고파요");
+    CompletableFuture<String> f3 = delayedFuture(3000, "배불러요");
+
+    CompletableFuture.anyOf(f1, f2, f3)
+        .thenAcceptAsync(msg -> {
+          log.info("--- after anyOf");
+          try {
+            log.info("msg : " + msg);
+          } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+          }
+        })
+        .join();
+
+    long endTime = System.currentTimeMillis();
+    log.info("   took {} ms", (endTime - started));
+  }
+
+  public static CompletableFuture<String> delayedFuture(long ms, String msg){
+    return CompletableFuture.supplyAsync(()->{
+      log.info("delayedFuture, ms = " + ms);
+      sleep(ms);
+      return msg;
+    });
+  }
+
+  @SneakyThrows
+  public static void sleep(long ms){
+    Thread.sleep(ms);
+  }
+}
+```
+
+<br/>
+
+출력결과를 보면 가장 먼저 끝나는 작업인 1초가 걸리는 작업 `f1` 이 가장 먼저 끝났고, 그 결과 메시지로 '안녕하세요' 라는 문구를 출력하고 있음을 확인 가능합니다. 전체 작업의 수행에는 1초가 걸렸음을 확인 가능합니다.<br/><br/>
+
+출력결과
+
+```plain
+12:12:54.476 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.concurrent.sync_async.completable_future.AnyOf_Example1 -- delayedFuture, ms = 1000
+12:12:54.476 [ForkJoinPool.commonPool-worker-2] INFO io...concurrent.concurrent.sync_async.completable_future.AnyOf_Example1 -- delayedFuture, ms = 2000
+12:12:54.476 [ForkJoinPool.commonPool-worker-3] INFO io...concurrent.concurrent.sync_async.completable_future.AnyOf_Example1 -- delayedFuture, ms = 3000
+12:12:55.480 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.concurrent.sync_async.completable_future.AnyOf_Example1 -- --- after anyOf
+12:12:55.480 [ForkJoinPool.commonPool-worker-1] INFO io...concurrent.concurrent.sync_async.completable_future.AnyOf_Example1 -- msg : 안녕하세요
+12:12:55.481 [main] INFO io...concurrent.concurrent.sync_async.completable_future.AnyOf_Example1 --    took 1016 ms
+
+Process finished with exit code 0
+```
+
+<br/>
+
+
+
+### CompletableFuture 의 한계점
+
+**지연로딩 미지원**
+
+- CompletableFuture 는 위에서도 예제들을 실행시켜보면서 확인했듯, 지연로딩이 지원되지 않습니다.
+- CompletableFuture 의 함수를 호출하는 즉시 내부 구문이 실행됩니다.
+
+<br/>
+
+지속적으로 발생하는 데이터를 처리하기 쉽지 않다.
+
+- CompletableFuture 는 한번 생성한 후에 작업을 끝내고 나서 똑같은 작업을 계속 수행할 수 없다는 단점이 있습니다.
+- Flux, Mono 의 예를 들어보면, 계속해서 Publisher 는 데이터를 공급하고, Subscriber 는 계속해서 데이터를 수신합니다. 반면 CompletableFuture 는 매번 새로 Future 객체를 생성해서 작업을 즉시 수행하고 자원을 반납해야 한다는 단점이 있습니다.
+
+<br/>
 
 
 
