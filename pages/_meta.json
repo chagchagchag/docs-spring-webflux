@@ -9,8 +9,7 @@
   "kotlin-coroutine": "Kotlin Coroutine",
   "server-sent-event": "Server Sent Event (SSE)",
   "webflux-websocket": "Webflux Websocket",
-  "r2dbc-mysql": "Spring Data R2dbc",
-  "reactive-mongodb": "Spring Data Reactive Mongodb",
+  "spring-data-reactive": "Spring Data Reactive",
   "contact": {
     "title": "Contact ↗",
     "type": "page",

@@ -1,5 +1,4 @@
 {
-    "intro": "Intro",
     "servlet-stack-vs-reactive-stack": "Servlet Stack vs Reactive Stack",
     "spring-mvc-vs-spring-webflux": "Spring MVC vs Spring Webflux",
     "dispatcher-handler-communication-spring-webflux": "DispatcherHandler 와 Spring Webflux",

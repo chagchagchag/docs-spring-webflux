@@ -1,5 +1,4 @@
 {
-    "intro": "intro",
     "what-is-reactive": "Reactive란?",
     "netflix-rxjava-story": "Netflix RxJava 이야기",
     "publisher-subscriber-subscription-backpressure": "Publisher,Subscriber,Subscription,Backpressure",
