@@ -92,7 +92,7 @@ Dispatch
 Acceptor
 
 - Acceptor 는 Application 전역적으로 1개의 객체만 존재합니다.
-- Acceptor 가 handle() 을 수행할 때 ServerSocketChannel 이 accept()  성공적으로 수립했을 때 생성된 클라이언트의 SocketChannel 을 획득합니다.
+- Acceptor 가 handle() 을 수행할 때 ServerSocketChannel 이 accept() 를 성공적으로 수립했을 때 생성된 클라이언트의 SocketChannel 을 획득합니다.
 - 이후에 TcpEventhHandler 객체를 생성하고, TcpEventHandler 객체 생성시에, 객체 내에 클라이언트의 SocketChannel 을 전달해주어 클라이언트 소켓을 바인딩해줍니다. 
 
 - 신규 접속 생성시마다 해당하는 커넥션 하나당 하나의 HttpEventHandler 객체를 새로 생성합니다.
