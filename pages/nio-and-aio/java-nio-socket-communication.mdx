@@ -345,6 +345,16 @@ SelectionKey key = channel.register(selector, SelectionKey.OP_READ, theObject);
 
 
 
+위의 코드는 아래와 같이 변경하는 것 역시 가능합니다.
+
+```java
+SelectionKey key = channel.register(selector, SelectionKey.OP_READ).attach(acceptor);
+```
+
+<br/>
+
+
+
 ## e.g.1 : 단순한 버전의 Client, Server
 
 예제코드는 [https://github.com/chagchagchag/webflux-mongo-mysql-redis/tree/main/demo-nio/src/main/java/io/chagchagchag/example/foobar/nio/socket](https://github.com/chagchagchag/webflux-mongo-mysql-redis/tree/main/demo-nio/src/main/java/io/chagchagchag/example/foobar/nio/socket) 에 `Example1_` 로 시작하는 파일명 들입니다.
