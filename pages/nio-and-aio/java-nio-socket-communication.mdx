@@ -22,23 +22,75 @@ JAVA NIO 의 셀렉터/채널 기반의 소켓 프로그래밍은 하나의 스�
 
 구체적인 통신 과정은 다음과 같습니다.
 
-> 그림 추가 작업 중.
+![](./img/java-nio-socket-communication/selector-channel-process.png)
 
-셀렉터는 register() 메서드를 통해서 하나 이상의 채널을 셀렉터에 등록합니다. 이후 select() 메서드를 통해 호출할 때 등록된 채널 들 중 이벤트 준비가 완료된 하나 이상 발생할 때 까지 block 됩니다. select() 메서드 내에서 하나 이상의 채널의 이벤트가 발생하면 select() 메서드 다음으로 넘어갑니다. 그리고 selector.selectedKeys() 를 통해서 준비가 완료된 채널들의 목록을 통해서 채널들의 목록을 반환하며, 이 채널들의 이벤트 성격(Acceptable, Readable 등)에 따라 각각의 처리를 합니다.<br/><br/>
+셀렉터는 register() 메서드를 통해서 하나 이상의 채널을 셀렉터에 등록합니다.<br/>
+
+이후 select() 메서드를 통해 호출할 때 등록된 채널 들 중 이벤트 준비가 완료된 하나 이상 발생할 때 까지 block 됩니다. select() 메서드 내에서 하나 이상의 채널의 이벤트가 발생하면 select() 메서드 다음으로 넘어갑니다. <br/>
+
+그리고 selector.selectedKeys() 를 통해서 준비가 완료된 채널들의 목록을 통해서 채널들의 목록을 반환하며, 이 채널들의 이벤트 성격(Acceptable, Readable 등)에 따라 각각의 처리를 합니다.<br/><br/>
 
 
 
-## 채널이란?
+## Channel(채널), Buffer(버퍼)
+
+![](./img/java-nio-socket-communication/channel-buffer.png)
+
+<br/>
 
 
 
-## Buffer 란?
+Channel 은 Stream 과 유사한 개념이며 Stream 과 비교해서 아래의 차이점들이 있습니다.
+
+> Stream 은 Java 의 Stream 이 아닌 InputStream, OutputStream 과 유사한 개념입니다.
+
+- Channel 은 Read, Write 모두 가능하지만, Stream 은 단방향(Read 만 가능하거나 Write만 가능)으로만 가능합니다.
+- Channel 은 비동기(Asynchronous)적으로 읽고 쓰는 것이 가능합니다.
+- Channel 은 항상 Buffer 로부터 읽고 쓰는 작업을 수행합니다.
+
+<br/>
+
+
+
+Channel 에는 대표적으로 FileChannel, DatagramChannel, SocketChannel, ServerSocketChannel 이 있습니다.
+
+- FileChannel : 파일에 데이터를 Read/Write 합니다.
+- DatagramChannel : UDP 통신을 통해 네트워크 데이터를 Read/Write 합니다.
+- SocketChannel : TCP 통신을 통해 네트워크 데이터를 Read/Write 합니다.
+- ServerSocketChannel : TCP Listening(수신작업)을 수행합니다. 유입되는 연결마다 SocketChannel 이 만들어집니다.
+
+<br/>
+
+
+
+사용자가 채널에 데이터를 읽거나 쓰기위해서는 Buffer 를 통해서 읽고 씁니다. 데이터를 Buffer 를 통해 읽거나, Buffer 를 통해서 씁니다. Buffer 에는 아래와 같이 여러 종류의 Buffer 가 있습니다.
+
+- ByteBuffer
+- MappedByteBuffer
+- CharBuffer
+- ShortBuffer
+- IntBuffer
+- LongBuffer
+- FloatBuffer
+- DoubleBuffer
+
+
+
+지금부터는 Buffer 라는 용어보다는 `버퍼` 라는 단어로 사용하겠습니다. (영타 전환이 불편해서요)<br/>
+
+버퍼에 데이터를 쓸 때 버퍼는 지금까지 쓴 데이터의 양을 기록합니다. 데이터를 읽어들여야 할 때에는 flip() 메서드를 호출해서 버퍼를 쓰기 모드에서 읽기 모드로 전환합니다.<br/>
+
+데이터를 모두 읽은 후에는 버퍼를 지우고 다시 쓸 준비를 해야하는데 이때 clear(), compact() 메서드 중 하나를 호출해서 전체 버퍼를 지웁니다. clear() 메서드는 버퍼 전체를 지우며, compact() 메서드는 이미 읽은 데이터만 지웁니다.<br/>
 
 
 
 ## NIO 소켓 프로그래밍 API
 
 NIO 소켓 프로그래밍의 일반적인 API 와 통신 절차 등을 간략하게 정리해봅니다.<br/>
+
+![](./img/java-nio-socket-communication/selector-channel-process.png)
+
+<br/>
 
 
 
@@ -136,6 +188,8 @@ Set<SelectionKey> selectedKeys = selector.selectedKeys();
 ```
 
 <br/>
+
+
 
 참고로 `Selector.selectedKeys()` 가 반환하는 `Set<SelectionKey>` 는 Thread Safe 하지 않기 때문에 `Concurrent***` 계열의 자료구조에 복사해서 불변성 처리를 하는 것도 좋은 방법입니다.<br/>
 
