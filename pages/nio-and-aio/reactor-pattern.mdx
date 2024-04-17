@@ -42,7 +42,7 @@ Reactor Pattern 을 적용하기 전, 이전에 살펴본 nio 채팅 코드는 �
 
 ## Reactor Pattern 이란?
 
-Reactor 패턴은 동시에 들어오는 요청들을 처리하기 위해 만들어진 이벤트 핸들링 패턴입니다. Reactor 패턴에는 Reactor, Handler 라고 하는 대표적인 두 요소가 있습니다.
+Reactor 패턴은 동시에 들어오는 요청들을 처리하기 위해 만들어진 이벤트 핸들링 패턴입니다. Reactor 패턴에는 Reactor, Dispatcher, Handler 라고 하는 대표적인 3 요소가 있습니다.
 
 Reactor
 
@@ -119,7 +119,7 @@ Acceptor, TcpEventHandler 는 Dispatch 입장에서는 EventHandler 라는 추�
 
 
 
-예제는 별도의 실습 문서 들에서 따로 정리하며 예제는 아래의 두 종류를 예제로 수행합니다.<br/>
+예제는 별도의 실습 문서 들에서 따로 정리하며 예제는 아래의 두 종류의 예제를 예제로 수행합니다.<br/>
 
 - Reactor 패턴 기반의 소켓 프로그램
 - Reactor 패턴 기반의 Http 서버 프로그램
