@@ -5,5 +5,6 @@
     "reactor-pattern": "Reactor 패턴",
     "reactor-pattern-socket-communication": "Reactor 패턴 소켓통신, 예제",
     "reactor-pattern-based-http-server": "Reactor 패턴 기반의 HTTP 서버 예제",
+    "proactor-pattern": "proactor 패턴",
     "what-is-aio": "AIO 의 개념, 특징, 예제"
 }

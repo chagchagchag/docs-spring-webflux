@@ -1,0 +1,52 @@
+## Proactor 패턴
+
+Proactor 패턴에서는 아래의 세가지만 기억하시면, 오랫동안 기억에 남습니다.
+
+- CompletionHandler
+- callback
+- 커널에  직접 접근
+
+<br/>
+
+
+
+Proactor 패턴의 소켓프로그래밍에서는 callback 방식의 네트워크 핸들링 처리를 합니다. 그리고 Callback 은 보통 CompletionHandler 를 implements 한 구체타입을 통해 구현합니다.<br/>
+
+
+
+Reactor 패턴에서는 사실 아래와 같은 문제점이 있었습니다.
+
+- Reactor 패턴에서는 싱글스레드 기반으로 Selector 에 접근해서 이벤트를 처리하기에 꽤 높은 빈도의 트래픽이 발생할 경우, 이벤트 한 건의 처리가 오래 걸릴 경우와 같은 상황에서 시스템에 부하가 크게 발생하며 병목구간이 발생하게 됩니다. 싱글스레드 기반으로 Selector 를 운영하기에 부하가 생기게 됩니다.
+- Reactor 패턴에서는 Selector 가 커널에 이벤트를 등록하고 인출하고 이벤트가 완료되었는지 확인합니다. 따라서 Selector 가 특정 이벤트 처리시에 병목구간이 생길 경우 대응 방안이 없습니다.
+- 즉 Reactor 패턴에서는 Selector 를 통해서 커널에 접근해야 하는데, Selector 가 병목이 생길 확률이 높습니다.
+
+<br/>
+
+
+
+Proactor Pattern 은 이런 문제를 커널에 직접 커널에 등록하고, 이벤트 인출,완료 등을 수행하는 방식으로 해결합니다. Selector 의 이벤트 처리시 병목구간 발생에 대한 리스크가 없습니다.<br/>
+
+Proactor Pattern 은 callback, future 방식을 지원하는데, callback 방식을 통해 구현할 경우 CompletionHandler 인터페이스를 이용해서 구현 가능합니다.<br/>
+
+future 를 사용하는 예제, callback 을 사용하는 예제 모두 AIO 소켓 프로그래밍 예제에서 정리하고 개념 역시 한번 더 정리합니다. <br/>
+
+이번 문서에서는 callback 을 사용하는 간단한 예제와, 동작의 흐름을 간단하게 정리하고 요약하고 넘어갑니다.<br/>
+
+
+
+## call flow
+
+
+
+
+
+## e.g.
+
+
+
+
+
+
+
+
+
