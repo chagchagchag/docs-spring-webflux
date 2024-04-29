@@ -6,6 +6,24 @@
 
 
 
+![](https://cdn.educba.com/academy/wp-content/uploads/2021/05/Kafka-Replication-Factor-2-1.png.webp)
+
+
+
+> 출처 : https://www.educba.com/kafka-replication-factor/
+
+<br/>
+
+
+
+![](https://miro.medium.com/v2/resize:fit:828/format:webp/1*Sza0NeMLKrNFNC245mLzWw.jpeg)
+
+> 출처 : https://medium.com/@_amanarora/replication-in-kafka-58b39e91b64e
+
+<br/>
+
+
+
 ## Kafka 의 주요 특징
 
 1. **분산 시스템:**
@@ -174,3 +192,114 @@
 참고로 주키퍼(zookeeper) 역시 클러스터링이 가능합니다.<br/>
 
 <br/>
+
+
+
+## 가용성(Availability)
+
+**가용성(Availability) 라는 단어는 Available 해야 한다**는 성격을 의미합니다. **어떤 노드나 커넥션 포인트가 계속해서 접근이 가능한 성격을 띄어야 한다**는 이야기 입니다. 만약 노드 하나가 통신이 불가능한 상황이 되었을 때 같은 그룹 내의 다른 노드가 그 역할을 대신할 수 있어야 하는데, 이와 같은 용어를 가용성(Availability) 라고 부릅니다.<br/>
+
+가용성 이라는 한글,한문 단어는 흔히 자주 언급되는 개념이지만, 쉽게 와닿지 않는 답답한 단어 같습니다. 오히려 영어인 Availability 가 더 합리적인 단어로 느껴집니다. <br/>
+
+가용성(Availability)를 지원하는 순간 리소스를 어느 정도는 소모를 해야 합니다. 다른 노드 들에 데이터를 복제한다던가 healthcheck 를 한다던가 하는 동작이 필요합니다. 따라서 단순한 로컬 캐시에 비해서는 성능적으로 조금은 느려질 수 있지만, 크게 느려지는 수준은 아니며, 증분방식의 메트릭 수집등을 하기에 심각한 성능 소모는 없습니다.<br/>
+
+예를 들면 로컬 캐시를 구성하더라도 로컬 캐시가 노드마다 하나씩 복제되어 있다거나 하는 그런 안전한 대책이 필요하다면 EhCache 기반의 로컬 캐시를 사용하기 보다는 Hazelcast 를 기반으로 로컬 캐시 역할도 가능하면서 Clustering 이 가능하도록 인메모리 그리드로 구성하게 됩니다.<br/>
+
+레디스를 구성할 때 여러 노드 기반으로 클러스터링이 된 클러스터를 구성하는 것 역시 가용성(Availability) 를 제공하기 위한 개념 중 하나라고 할 수 있습니다.<br/>
+
+
+
+## Partition, RF, ISR 
+
+### Partition
+
+> 위에서 한번 정리했지만, 이번에는 RF, ISR 을 설명하기 위해 간단하게 요약해봅니다.
+
+하나의 토픽은 여러개의 파티션으로 분리될 수 있습니다. 파티션은 데이터가 저장될 위치를 의미합니다. 즉, 데이터에 대해 파티셔닝 알고리즘을 적용해서 특정 파티션으로만 데이터가 전달될 수 있도록 파티션의 위치를 지정해주는 것을 파티셔닝이라고 합니다.<br/>
+
+파티션이 많으면 성능은 향상되지만 절대적이지는 않습니다. 브로커 성능에는 한계가 있기 때문입니다.<br/>
+
+
+
+### RF (Replication Factor)
+
+하나의 파티션은 1개 이상의 복제본 (Replica) 을 가질 수 있습니다. RF (Replication Factor) 는 복재본의 갯수를 의미합니다. RF가 1보다 크면 클수록 가용성(Availability)이 높아진다고 할 수 있습니다. 물론, 이때 브로커 갯수가 충분해야 합니다.<br/>
+
+RF 가 너무 크면 저장공간이 낭비된다는 단점이 있습니다. Produce 시에도 지연시간이 길어집니다. 복제해줘야 하는 노드가 많아지기 때문입니다.<br/>
+
+일반적으로 Replica 의 갯수는 Broker 의 갯수보다 적은 것이 권장됩니다. 그래야 안정적이고 성능 부하가 없습니다.<br/>
+
+
+
+아래의 그림들을 참고해주시기 바랍니다.
+
+![](https://cdn.educba.com/academy/wp-content/uploads/2021/05/Kafka-Replication-Factor-2-1.png.webp)
+
+
+
+> 출처 : https://www.educba.com/kafka-replication-factor/
+
+<br/>
+
+
+
+![](https://miro.medium.com/v2/resize:fit:828/format:webp/1*Sza0NeMLKrNFNC245mLzWw.jpeg)
+
+> 출처 : https://medium.com/@_amanarora/replication-in-kafka-58b39e91b64e
+
+<br/>
+
+
+
+### ISR (In-Sync Replica)
+
+Replica 중 Sync 를 맞출 Replica 의 그룹을 ISR (In-Sync Replica) 그룹이라고 이야기합니다.<br/>
+
+Partition 의 복제본이 많아지면 가용성(Availability)가 늘어납니다. 그리고 'Produce' 시에도 복제해야 할 데이터가 늘어납니다. 이렇게 되면 Produce 시의 지연 시간이 길어질 수 있다는 단점이 생깁니다.<br/>
+
+<br/>
+
+
+
+ISR 그룹에 많은 파티션을 포함하고 있으면
+
+- Produce 신뢰성/가용성 향상
+- but, 지연시간 증가
+
+ISR 그룹에 적은 파티션을 포함하고 있으면
+
+- Produce 신뢰성/가용성 하락
+- but, 지연시간 감소
+
+<br/>
+
+
+
+"적절하게 토픽에 Produce 되었다"
+
+- → "토픽 내의 파티션들의 모든 ISR 그룹에 복제가 잘 이뤄졌다."
+
+<br/>
+
+
+
+Produce 가 되었다는 의미에는 꼭 ISR 그룹에 복제하는 작업도 모두 완료되었다는 의미가 내포되어 있다는 사실을 기억해야 합니다.<br/>
+
+<br/>
+
+
+
+## RabbitMQ
+
+RabbitMQ 의 경우 데이터를 그대로 보냅니다. 전송 레벨에서의 commit, rollback 이 없습니다. 따라서 전송실패나 예외 상황에 대한 예외 처리를 직접 작성해줘야 합니다. 캐싱전략을 잘짜거나 등등 이런 전략을 잘 구현한다면 예외 상황에 대한 대응이 가능해집니다.<br/>
+
+<br/>
+
+
+
+## Kafka
+
+카프카의 경우 전송 레벨에서의 commit, rollback 이 지원됩니다. 메시지 큐 레벨에서의 메시지 트랜잭션이라는 것이 존재합니다. 그런데, 간혹 이것을 비즈니스 실패시의 실패와 혼동해서 사용할 경우가 가끔 있는데, 단순한 전송 기능의 실패와 비즈니스 로직 실패와는 구별해서 사용해야 합니다.<br/>
+
+<br/>
+
