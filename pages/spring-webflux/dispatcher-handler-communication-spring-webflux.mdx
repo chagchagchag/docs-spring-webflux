@@ -24,34 +24,24 @@ DispatcherHandler 가 Resquest, Response 를 응답하기 위해 다른 객체�
 
 <br/>
 
-1\.
+0\.
 
-- 외부로부터 요청이 Reactor Netty 에 도착합니다.<br/>
-- React Netty 는 이 요청을 DispatcherHandler 에 전달합니다.<br/>
+- 외부로부터 요청이 Netty 에 도착합니다.<br/>
+- Netty 는 이 요청을 DispatcherHandler 에 전달합니다.<br/>
 
-2\. 3\. 
+1\. 
 
-- DispatcherHandler 는 요청의 파라미터 등을 파악해서 이 요청은 어떤 HandlerMapping 에 맞는 것인지를 조회해서 적절한 HandlerMapping 을 찾아냅니다.
+- DispatcherHandler 는 요청의 파라미터 등을 파악해서 이 요청은 어떤 Handler 로 처리하면 맞는지 찾기 위해 HandlerMapping 을 조회합니다.
+- 그리고 찾아낸 Handler 는 HandlerAdapter 리스트를 조회해서 어떤 HandlerAdapter가 맞는지를 찾습니다.
+- 찾아낸 HandlerAdapter 를 통해 진입한 Handler 또는 Controller 에서는 Service, Repository 등의 비즈니스 로직을 수행합니다.
 
-4\. 5\.
+2\.
 
-- DispatcherHandler 는 HandlerMapping 을 처리하기에 알맞는 HandlerAdapter 를 HandlerAdapter 목록에서 찾습니다. 
+- DispatcherHandler 는 HandlerAdapter 가 return 한 결과 값에 대해 알맞은 HandlerResult 객체를 HandlerResult 리스트에서 조회합니다.
 
-6\. 7\. 8\. 9\.
+3\.
 
-- DispatcherHandler 는 4\.5\. 에서 찾아낸 HandlerAdapter 객체의 handle() 메서드를 실행합니다. 이 `HandlerAdapter` 는 interface 인데, 이 것을 구현하고 있는 구현체 들 중 하나로부터 적절한 Controller 등을 찾아내서 Request 에 대한 처리를 수행합니다. 이 때 결과값은 HandlerResult 로 전달받게 됩니다.
-
-10\. 11\.
-
-- 위에서 구한 HandlerResult 를 처리할 수 있는 객체는 HandlerResultHandler 타입의 객체인데 보통 이런 HandlerResultHandler 는 여러개입니다. 이 중 적절한 HandlerResultHandler 를 찾아냅니다.
-
-12\.
-
-- DispatcherHandler 는 찾아낸 HandlerResultHandler 객체 내의 `handleResult()` 메서드를 실행합니다. 
-
-13\.
-
-- 그리고 DispatcherHandler 는 handleResult() 메서드로 실행한 결과를 Response 로 해서 Reactor Netty 에게 반환해줍니다.
+- DispatcherHandler 는 HandlerResult 를 종류에 맞게 적절한 처리를 할 수 있는 HandlerResultHandler 를 이용해서 사용자에게 응답을 해줍니다.
 
 <br/>
 
